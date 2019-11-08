@@ -1,2 +1,2 @@
-all: bao.tex bao.bib
-	latexmk -pdf -silent -auxdir=build -outdir=build bao.tex
+all: blake3.tex blake3.bib
+	latexmk -pdf -silent -auxdir=build -outdir=build blake3.tex
