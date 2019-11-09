@@ -7,9 +7,9 @@
   pdfmenubar=false,     % show Acrobat’s menu?
   pdffitwindow=false,   % window fit to page when opened
   pdfstartview={FitH},  % fits the width of the page to the window
-  pdftitle={TODO},      % title
+  pdftitle={BLAKE3},    % title
   pdfauthor={TODO},     % author
-  pdfsubject={TODO},    % subject of the document
+  pdfsubject={BLAKE3},  % subject of the document
   pdfnewwindow=true,    % links in new window
   colorlinks=true,      % false: boxed links; true: colored links
   linkcolor=darkgreen,  % color of internal links
@@ -41,6 +41,7 @@
 \usepackage{booktabs}
 \usepackage{listings}
 \usepackage{tikz}
+\usepackage[T1]{fontenc} % improves underscore rendering
 \usetikzlibrary
 {
   calc,
@@ -101,8 +102,16 @@ AUTHORS
 
 \begin{center}
   \begin{minipage}{0.92\linewidth}
-  \textbf{Abstract.} 
-    TODO
+  \textbf{Abstract.}
+      We present the cryptographic hash function BLAKE3, an improved version of
+      BLAKE2 and its predecessor, the SHA-3 finalist BLAKE. BLAKE3 supports
+      higher degrees of parallelism than BLAKE2, using an internal tree
+      structure that scales up to any number of cores and SIMD lanes. Because
+      of this parallelism, BLAKE3's peak throughput on a typical desktop
+      computer is an order of magnitude above SHA-2, SHA-3, and BLAKE2b. BLAKE3
+      is also more efficient than SHA-2, SHA-3, and BLAKE2b on smaller
+      architectures and microcontrollers. And unlike BLAKE2, BLAKE3 is a single
+      hash function, without any incompatible variants or flavors.
    \end{minipage}
 \end{center}
 
@@ -110,7 +119,36 @@ AUTHORS
 
 \section{Introduction}\label{sec:intro}
 
-Lorem ipsum.
+Since its introduction in 2012, BLAKE2 has become a widely used standard, in
+large part because of its good performance in software. Both BLAKE2b and
+BLAKE2s are included in the Python and Go standard libraries, and BLAKE2b is
+included in GNU Coreutils as the \texttt{b2sum} utility. BLAKE2b is also
+Libsodium's \texttt{generic\_hash} and the basis for Argon2, the winner of the
+Password Hashing Competition.
+
+However, BLAKE2's biggest weakness has been its large number of variants. The
+original BLAKE2 standard described 32-bit BLAKE2s, 64-bit BLAKE2b, the parallel
+variants BLAKE2sp and BLAKE2bp, and a framework for tree modes. Four years
+later, the BLAKE2X standard added extensible output modes. None of these are
+compatible with each other. Users have had to choose between optimizing for
+32-bit or 64-bit platforms, and between optimizing for short or long messages.
+
+BLAKE3 eliminates these tradeoffs, providing a single variant that is efficient
+in a wide variety of use cases. Internally, it divides its input into 2 KiB
+chunks and arranges those chunks as the leaves of a binary Merkle tree. This
+avoids introducing any overhead for short messages, and it allows an
+arbitrarily high degree of parallelism as messages get longer. That parallelism
+allows BLAKE3 to use a compression function that is efficient on small
+architectures, without compromising peak throughput on desktop and server
+systems with SIMD support.
+
+The BLAKE3 compression function is based on BLAKE2s. The round function is
+unchanged, and BLAKE3 benefits from the cryptanalysis done on BLAKE2. Since no
+meaningful progress has been made in analyzing BLAKE or BLAKE2 since 2011, we
+believe the original choice of 10 rounds was overly conservative, and BLAKE3
+reduces the number of rounds to 7. BLAKE3 also changes the setup and
+finalization steps of the compression function to accomodate the internal tree
+mode, to reduce the cost of keying, and to support extensible output.
 
 \nocite{DBLP:journals/iacr/AumassonNWW13,DBLP:journals/rfc/rfc7693,DBLP:journals/tosc/LuykxMN16}
 
