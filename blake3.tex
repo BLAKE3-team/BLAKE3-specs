@@ -74,7 +74,7 @@
 
 %\maketitle
 \begin{center}
-{\huge BLAKE3}
+{\huge BLAKE3: one function, embarrassingly parallel}
 
 \bigskip
 
@@ -172,8 +172,8 @@ The biggest changes from BLAKE2 and BLAKE3 are:
     \item BLAKE3 has \textbf{no variants or flavors}.
     \item BLAKE3 uses an \textbf{internal tree mode}.
     \item The compression function uses \textbf{fewer rounds}.
-    \item In lieu of a parameter block, the BLAKE3 API provides \textbf{three
-        domain-separated functions}: \texttt{hash(input)},
+    \item In lieu of a parameter block, BLAKE3 provides \textbf{three
+        domain-separated public APIs}: \texttt{hash(input)},
         \texttt{keyed\_hash(input, key)}, and \texttt{derive\_key(key,
         context)}.
     \item The space formerly occupied by the parameter block is now used for
