@@ -56,8 +56,6 @@
 \definecolor{darkblue}{RGB}{0,0,170}
 \definecolor{darkgreen}{RGB}{0,170,0}
 
-\newcommand{\name}{BLAKE3\xspace}
-
 \newdateformat{mydate}{\THEYEAR.\twodigit\THEMONTH.\twodigit\THEDAY}
 
 \newcommand{\GG}{\mathsf{G}}
@@ -66,7 +64,7 @@
 \newcommand{\lto}{\leftarrow}
 \newcommand{\BB}{\mathsf{B2}}
 
-\title{\name}
+\title{BLAKE3}
 
 \begin{document}
 
@@ -76,7 +74,7 @@
 
 %\maketitle
 \begin{center}
-{\huge \name}
+{\huge BLAKE3}
 
 \bigskip
 
@@ -186,11 +184,11 @@ The biggest changes from BLAKE2 and BLAKE3 are:
 
 \nocite{DBLP:journals/iacr/AumassonNWW13,DBLP:journals/rfc/rfc7693,DBLP:journals/tosc/LuykxMN16}
 
-\section{Specification of \name}\label{sec:specification}
+\section{Specification of BLAKE3}\label{sec:specification}
 
 \subsection{Tree Structure}\label{sec:tree}
 
-\name divides the input up into 4096-byte chunks. The final chunk may be shorter, but it's never empty unless the input itself is empty. The chunks are arranged as the leaves of a binary tree. All parent nodes have exactly two children, and the content of each parent node is the hash of its left child concatenated with the hash of its right child. When there's an odd number of nodes in a given level of the tree, the rightmost node is raised to the level above. Here's what the tree looks like as it grows from 1 to 4 chunks.
+BLAKE3 divides the input up into 4096-byte chunks. The final chunk may be shorter, but it's never empty unless the input itself is empty. The chunks are arranged as the leaves of a binary tree. All parent nodes have exactly two children, and the content of each parent node is the hash of its left child concatenated with the hash of its right child. When there's an odd number of nodes in a given level of the tree, the rightmost node is raised to the level above. Here's what the tree looks like as it grows from 1 to 4 chunks.
 
 \begin{figure}[h]
 \centering
@@ -256,7 +254,7 @@ Hashing nodes is done with BLAKE2s, using the following parameters:
 \end{itemize}
 In addition, the root node -- whether it's a chunk or a parent -- has the \textbf{last node} finalization flag set to true. Note that BLAKE2 supports setting the last node flag at any time, so hashing the first chunk can begin without knowing whether it's the root.
 
-That root node hash is the output of \name. Here's an example tree, with 8193 bytes of input that are all zero:
+That root node hash is the output of BLAKE3. Here's an example tree, with 8193 bytes of input that are all zero:
 \begin{figure}[h]
 \centering
 TODO.
@@ -344,7 +342,7 @@ For decoders that don't expose a \texttt{.length()} method and don't support see
 \begin{itemize}
 \item Any output byte returned by the decoder matches the corresponding input byte from the original input.
 \item If EOF is indicated to the caller in any way, either through a read or through a seek, it matches the length of the original input.
-\item If the decoder reads a complete output to EOF, the decoding hash must be the \name hash of that output. There are no ``decoding collisions'' where two different hashes decode the same output to EOF. (Though two different hashes may decode the same output, if at least one of the decodings encounters an error before EOF.)
+\item If the decoder reads a complete output to EOF, the decoding hash must be the BLAKE3 hash of that output. There are no ``decoding collisions'' where two different hashes decode the same output to EOF. (Though two different hashes may decode the same output, if at least one of the decodings encounters an error before EOF.)
 \end{itemize}
 Note one non-guarantee in particular: The encoding itself may be malleable. Multiple ``different'' encodings may decode to the same input, under the same hash. See the design rationales for more on this.
 
@@ -352,7 +350,7 @@ Note one non-guarantee in particular: The encoding itself may be malleable. Mult
 
 When designing a tree mode, there are pitfalls that can compromise the security of the underlying hash. For example, if one input produces a tree with bytes X at the root node, and we choose another input to be those same bytes X, do those two inputs result in the same root hash? If so, that's a hash collision, regardless of the security of the underlying hash function. Or if one input results in a root hash Y, could Y be incorporated as a subtree hash in another tree without knowing the input that produced it? If so, that's a length extension, again regardless of the properties of the underlying hash. There are many possible variants of these problems.
 
-Daemen et al.~\cite{DBLP:journals/ijisec/BertoniDPA14,DBLP:journals/tosc/DaemenMA18} lays out a minimal set of requirements for a tree mode, to prevent attacks like the above. This section describes how \name satisfies those requirements. They are:
+Daemen et al.~\cite{DBLP:journals/ijisec/BertoniDPA14,DBLP:journals/tosc/DaemenMA18} lays out a minimal set of requirements for a tree mode, to prevent attacks like the above. This section describes how BLAKE3 satisfies those requirements. They are:
 \begin{enumerate}
 \item \textbf{Tree decodability.} The exact definition of this property is fairly technical, but the gist of it is that it needs to be impossible to take a valid tree, add more child nodes to it somewhere, and wind up with another valid tree. That is, it shouldn't be possible to interpret a leaf node as a parent node, or to add more children to an existing parent node.
 \item \textbf{Message completeness.} It needs to be possible to reconstruct the original message unambiguously from the tree.
@@ -368,9 +366,9 @@ That framework concerns the security of the hash function. To reason about the s
 
 \section{Storage Requirements}\label{sec:storage}
 
-A \name implementation needs to store one hash ($32$ bytes) for every level of the tree. The largest supported input is $2^{64} - 1$ bytes. Given the $4096$-byte chunk size ($2^{12}$), that's $2^{52}$ leaf nodes, or a maximum tree height of $52$. Storing $52$ hashes, $32$ bytes each, requires $1664$ bytes, in addition to the $168$ bytes required by BLAKE2s. For comparison, the TLS record buffer is $16384$ bytes.
+A BLAKE3 implementation needs to store one hash ($32$ bytes) for every level of the tree. The largest supported input is $2^{64} - 1$ bytes. Given the $4096$-byte chunk size ($2^{12}$), that's $2^{52}$ leaf nodes, or a maximum tree height of $52$. Storing $52$ hashes, $32$ bytes each, requires $1664$ bytes, in addition to the $168$ bytes required by BLAKE2s. For comparison, the TLS record buffer is $16384$ bytes.
 
-Extremely space-constrained implementations that want to use \name have to define a more aggressive limit for their maximum input size. In some cases, such a limit is already provided by the protocol they're implementing. For example, the largest possible IPv6 ``jumbogram'' is $4$\,GiB. Limited to that maximum input size, \name's storage overhead would be $20$ hashes or $640$ bytes.
+Extremely space-constrained implementations that want to use BLAKE3 have to define a more aggressive limit for their maximum input size. In some cases, such a limit is already provided by the protocol they're implementing. For example, the largest possible IPv6 ``jumbogram'' is $4$\,GiB. Limited to that maximum input size, BLAKE3's storage overhead would be $20$ hashes or $640$ bytes.
 
 
 \section{Performance}\label{sec:performance}
@@ -379,7 +377,7 @@ To get the highest possible throughput, the reference implementation uses both m
 
 Multithreading in the current implementation is done with the join function from the Rayon library. It splits up its input recursively -- an excellent fit for traversing a tree -- and allows worker threads to ``steal'' the right half of the split, if they happen to be free. Once the global thread pool is initialized, this approach doesn't require any heap allocations.
 
-There are two different approaches to using SIMD to speed up BLAKE2. The more common way is to optimize a single instance, and that's the approach that just beats SHA-1 in the BLAKE2b benchmarks. But the more efficient way, when you have multiple inputs, is to run multiple instances in parallel on a single thread. Samuel Neves discussed the second approach in a 2012 paper and implemented it in the reference AVX2 implementation of BLAKE2sp. The overall throughput is more than triple that of a single optimized BLAKE2s instance. The \texttt{blake2s\_simd} implementation includes a \texttt{hash\_many} interface, which provides the same speedup for multiple instances of BLAKE2s, and \name uses that interface to make each worker thread hash multiple chunks in parallel. Note that the main downside of BLAKE2sp is that it hardcodes 8-way parallelism, such that moving to a higher degree of parallelism would change the output. But \texttt{hash\_many} doesn't have that limitation, and when AVX-512 becomes more widespread, it will execute 16-way parallelism without changing the output or the API.
+There are two different approaches to using SIMD to speed up BLAKE2. The more common way is to optimize a single instance, and that's the approach that just beats SHA-1 in the BLAKE2b benchmarks. But the more efficient way, when you have multiple inputs, is to run multiple instances in parallel on a single thread. Samuel Neves discussed the second approach in a 2012 paper and implemented it in the reference AVX2 implementation of BLAKE2sp. The overall throughput is more than triple that of a single optimized BLAKE2s instance. The \texttt{blake2s\_simd} implementation includes a \texttt{hash\_many} interface, which provides the same speedup for multiple instances of BLAKE2s, and BLAKE3 uses that interface to make each worker thread hash multiple chunks in parallel. Note that the main downside of BLAKE2sp is that it hardcodes 8-way parallelism, such that moving to a higher degree of parallelism would change the output. But \texttt{hash\_many} doesn't have that limitation, and when AVX-512 becomes more widespread, it will execute 16-way parallelism without changing the output or the API.
 
 \section{Rationale}\label{sec:rationale}
 
