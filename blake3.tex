@@ -106,14 +106,17 @@ AUTHORS
 
       \textbf{Abstract.} We present the cryptographic hash function BLAKE3, an
       improved version of BLAKE2 and of its predecessor, the SHA\=/3 finalist
-      BLAKE. BLAKE3 supports higher degrees of parallelism than BLAKE2, using
-      an internal tree structure that scales up to any number of cores and SIMD
-      lanes. Because of this parallelism, BLAKE3's peak throughput on a typical
-      desktop computer is an order of magnitude above SHA\=/2, SHA\=/3, and
-      BLAKE2b/s. At the same time, BLAKE3 is faster than SHA\=/2, SHA\=/3, and
-      BLAKE2 on smaller architectures and microcontrollers. And BLAKE3 is a
-      single hash function that is consistently fast in software, without any
-      incompatible variants or platform-specific flavors.
+      BLAKE. BLAKE3 supports high degrees of parallelism, using an internal
+      tree structure that scales up to any number of SIMD lanes or CPU cores.
+      On Intel Kaby Lake, peak single-threaded throughput is 3x that of
+      BLAKE2b, 4x that of SHA\=/2, and 8x that of SHA\=/3, and it can scale
+      further using multiple threads. At the same time, BLAKE3 is efficient on
+      smaller architectures and microcontrollers. Throughput on ARM Cortex-M0
+      is 40\% higher than BLAKE2s or SHA\=/256, and 3x that of BLAKE2b,
+      SHA\=/512, or SHA\=/3. And unlike BLAKE2 and SHA\=/2, which are divided
+      into incompatible, architecture-specific variants, BLAKE3 is a single
+      hash function, designed to be consistently fast in software across a wide
+      variety of platforms and use cases.
 
    \end{minipage}
 \end{center}
