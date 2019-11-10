@@ -133,7 +133,7 @@ function for Argon2, the winner of the Password Hashing Competition in 2015.
 However, a drawback of BLAKE2 has been its large number of incompatible
 variants. The original BLAKE2 paper described 64-bit BLAKE2b, 32-bit BLAKE2s,
 the parallel variants BLAKE2bp and BLAKE2sp, and a framework for tree modes.
-The BLAKE2X paper added extensible output modes. None of these variants are
+The BLAKE2X paper added extendable output modes. None of these variants are
 compatible with each other, and choosing the right one for an application means
 understanding both the tradeoffs between them and also the state of language
 and library support. BLAKE2b is the most widely supported variant, although it
@@ -151,10 +151,10 @@ Internally, BLAKE3 divides its input into 2 KiB chunks and arranges those
 chunks as the leaves of a binary Merkle tree. This tree structure means that
 there is no limit to the parallelism that BLAKE3 can exploit, given enough
 input. The direct benefit of that parallelism is very high throughput on
-systems with SIMD support, including all modern x86 processors. Another benefit
-of hashing chunks in parallel is that the implementation can use SIMD vectors
-of any width, regardless of the word size of the compression function. That
-leaves us free to use a compression function that is efficient on smaller
+platforms with SIMD support, including all modern x86 processors. Another
+benefit of hashing chunks in parallel is that the implementation can use SIMD
+vectors of any width, regardless of the word size of the compression function.
+That leaves us free to use a compression function that is efficient on smaller
 architectures, without sacrificing performance on x86\=/64.
 
 The BLAKE3 compression function is closely based on BLAKE2s. BLAKE3 has the
@@ -164,23 +164,24 @@ the cryptanalysis of BLAKE2 applies directly to BLAKE3. Based on that analysis
 and with the benefit of hindsight, we believe that BLAKE2 is overly
 conservative in its number of rounds, and BLAKE3 reduces the number of rounds
 from 10 to 7. BLAKE3 also changes the setup and finalization steps of the
-compression function to support the internal tree mode, more efficient keying,
-and extensible output.
+compression function to support the internal tree structure, more efficient
+keying, and extendable output.
 
-The biggest changes from BLAKE2 and BLAKE3 are:
+The biggest changes from BLAKE2 to BLAKE3 are:
 
 \begin{itemize}
-    \item BLAKE3 has \textbf{no variants or flavors}.
-    \item BLAKE3 uses an \textbf{internal tree mode}.
+    \item BLAKE3 uses an \textbf{internal tree structure}.
+    \item There are \textbf{no variants or flavors}.
     \item The compression function uses \textbf{fewer rounds}.
-    \item In lieu of a parameter block, BLAKE3 provides \textbf{three
-        domain-separated public APIs}: \texttt{hash(input)},
+    \item In lieu of a parameter block, the BLAKE3 API supports \textbf{three
+        domain-separated modes}: \texttt{hash(input)},
         \texttt{keyed\_hash(input, key)}, and \texttt{derive\_key(key,
-        context)}.
+        context)}. These modes differ only in the internal flag bits they set.
     \item The space formerly occupied by the parameter block is now used for
         the optional 256-bit key, so \textbf{keying is zero-cost}.
-    \item BLAKE3 has direct support for \textbf{extensible output}, which is
-        fully parallelizable.
+    \item BLAKE3 has built-in support for \textbf{extendable output}. Like
+        BLAKE2X, but unlike SHA\=/3 or HKDF, extended output is fully
+        parallelizable.
 \end{itemize}
 
 \nocite{DBLP:journals/iacr/AumassonNWW13,DBLP:journals/rfc/rfc7693,DBLP:journals/tosc/LuykxMN16}
