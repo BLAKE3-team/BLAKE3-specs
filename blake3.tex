@@ -157,14 +157,15 @@ of any width, regardless of the word size of the compression function. That
 leaves us free to use a compression function that is efficient on smaller
 architectures, without sacrificing performance on x86\=/64.
 
-The BLAKE3 compression function is closely based on BLAKE2s. The round function
+The BLAKE3 compression function is closely based on BLAKE2s. BLAKE3 has the
+same 128-bit security level and 256-bit default output size. The round function
 is identical, along with the IV constants and the message schedule. Thus, all
 the cryptanalysis of BLAKE2 applies directly to BLAKE3. Based on that analysis
 and with the benefit of hindsight, we believe that BLAKE2 is overly
-conservative in its number of rounds, and in BLAKE3 we reduce the number of
-rounds from 10 to 7. BLAKE3 also changes the setup and finalization steps of
-the compression function to support the internal tree mode, more efficient
-keying, and extensible output.
+conservative in its number of rounds, and BLAKE3 reduces the number of rounds
+from 10 to 7. BLAKE3 also changes the setup and finalization steps of the
+compression function to support the internal tree mode, more efficient keying,
+and extensible output.
 
 The biggest changes from BLAKE2 and BLAKE3 are:
 
