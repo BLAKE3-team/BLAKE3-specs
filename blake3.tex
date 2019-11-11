@@ -188,6 +188,73 @@ The biggest changes from BLAKE2 to BLAKE3 are:
 
 \section{Specification of BLAKE3}\label{sec:specification}
 
+\subsection{Compression Function}\label{sec:compression}
+
+The compression function takes five inputs. Each word is 32 bits:
+
+\begin{itemize}
+    \item The 32-byte chaining value, $h_{0} \ldots h_{7}$.
+    \item The 64-byte message block, $m_{0} \ldots m_{15}$.
+    \item A 64-bit offset, $t_{0}$ and $t_{1}$.
+    \item The block length, $b$.
+    \item A flags word, $f$.
+\end{itemize}
+
+The compression function uses a 16-word internal state $v_{0} \ldots v_{15}$.
+It initializes the state as follows. Here $\oplus$ denotes bitwise
+exclusive-or, and $\IV_{0} \ldots \IV_{7}$ are constants given in Appendix A:
+
+\begin{equation}
+\begin{pmatrix}
+v_{0} & v_{1} & v_{2} & v_{3} \\
+v_{4} & v_{5} & v_{6} & v_{7} \\
+v_{8} & v_{9} & v_{10} & v_{11} \\
+v_{12} & v_{13} & v_{14} & v_{15} \\
+\end{pmatrix}
+\leftarrow
+\begin{pmatrix}
+h_{0} & h_{1} & h_{2} & h_{3} \\
+h_{4} & h_{5} & h_{6} & h_{7} \\
+\IV_{0} & \IV_{1} & \IV_{2} & \IV_{3} \\
+t_{0} \oplus \IV_{4} & t_{1} \oplus \IV_{5} & b \oplus \IV_{6} & f \oplus \IV_{7}
+\end{pmatrix}
+\end{equation}
+
+The compression function then applies the round function 7 times, each time
+using the state $v_{0} \dots v_{15}$, the message block $m_{0} \ldots m_{15}$,
+and a message schedule. The round function and the message schedules for each
+round are the same as in BLAKE2s. They are reproduced in Appendix A.
+
+After 7 rounds of compression, the new chaining value $h_{0}' \ldots h_{7}'$ is
+defined as:
+
+\begin{equation}
+    h_{0}' \leftarrow v_{0} \oplus  v_{8} \\
+\end{equation}
+\begin{equation}
+    h_{1}' \leftarrow v_{1} \oplus  v_{9} \\
+\end{equation}
+\begin{equation}
+    h_{2}' \leftarrow v_{2} \oplus  v_{10} \\
+\end{equation}
+\begin{equation}
+    h_{3}' \leftarrow v_{3} \oplus  v_{11} \\
+\end{equation}
+\begin{equation}
+    h_{4}' \leftarrow v_{4} \oplus  v_{12} \\
+\end{equation}
+\begin{equation}
+    h_{5}' \leftarrow v_{5} \oplus  v_{13} \\
+\end{equation}
+\begin{equation}
+    h_{6}' \leftarrow v_{6} \oplus  v_{14} \\
+\end{equation}
+\begin{equation}
+    h_{7}' \leftarrow v_{7} \oplus  v_{15}
+\end{equation}
+
+
+
 \subsection{Tree Structure}\label{sec:tree}
 
 BLAKE3 divides the input up into 4096-byte chunks. The final chunk may be shorter, but it's never empty unless the input itself is empty. The chunks are arranged as the leaves of a binary tree. All parent nodes have exactly two children, and the content of each parent node is the hash of its left child concatenated with the hash of its right child. When there's an odd number of nodes in a given level of the tree, the rightmost node is raised to the level above. Here's what the tree looks like as it grows from 1 to 4 chunks.
