@@ -201,7 +201,7 @@ are:
     \item The block length, $b$.
     \item A 64-bit offset, split into a lower order word $t_{0}$ and a higher
         order word $t_{1}$.
-    \item Domain separation bit flags, $f$.
+    \item Domain separation bit flags, $d$.
 \end{itemize}
 
 The compression function initializes its 16-word internal state $v_{0} \ldots
@@ -220,7 +220,7 @@ v_{12} & v_{13} & v_{14} & v_{15} \\
 h_{0} & h_{1} & h_{2} & h_{3} \\
 h_{4} & h_{5} & h_{6} & h_{7} \\
 \IV_{0} & \IV_{1} & \IV_{2} & \IV_{3} \\
-t_{0} \oplus \IV_{4} & t_{1} \oplus \IV_{5} & b \oplus \IV_{6} & f \oplus \IV_{7}
+t_{0} \oplus \IV_{4} & t_{1} \oplus \IV_{5} & b \oplus \IV_{6} & d \oplus \IV_{7}
 \end{pmatrix}
 \end{equation*}
 
