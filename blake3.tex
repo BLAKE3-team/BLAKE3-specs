@@ -43,6 +43,8 @@
 \usepackage{tikz}
 \usepackage[T1]{fontenc} % improves underscore rendering
 \usepackage[shortcuts]{extdash} % unbreakable dashes, e.g. SHA\=/2
+\usepackage[outputdir=build]{minted} % syntax highlighting using Pygments
+\usepackage[title]{appendix} % add "Appendix" to each appendix section title
 \usetikzlibrary
 {
   calc,
@@ -442,5 +444,13 @@ TODO
 
 \bibliographystyle{plainurl}
 \bibliography{blake3}
+
+\begin{appendices}
+
+\section{Rust Reference Implementation}\label{sec:referenceimpl}
+
+\inputminted{rust}{reference_impl.rs}
+
+\end{appendices}
 
 \end{document}
