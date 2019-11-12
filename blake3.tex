@@ -197,14 +197,12 @@ it is empty if and only if the entire input is empty. If there is only one
 chunk, that chunk is the root node and only node of the tree. Otherwise, the
 chunks are joined with parent nodes. The structure of the tree is determined by
 two rules:
-
 \begin{itemize}
     \item Each left subtree is a complete binary tree, with all its chunks at
         the same depth, and number of chunks that is a power of 2.
     \item Each left subtree contains a number of chunks greater than or equal
         to the number of chunks in its sibling right subtree.
 \end{itemize}
-
 For example, trees from 1 to 4 chunks have the structure shown in
 Figure~\ref{fig:fourchunks}.
 
@@ -366,7 +364,37 @@ chaining value of the parent node.
 
 \section{Round Function}\label{sec:roundfn}
 
-TODO
+    The compression function transforms the internal state $v_{0} \ldots v_{15}$
+    through a sequence of 7 rounds. The round function is the same as in
+    BLAKE2s. A round does:
+
+\begin{center}
+\begin{tabular}{ l l l l }
+    $\GG_{0}(v_{0}, v_{4}, v_{8}, v_{12})$ &
+    $\GG_{1}(v_{1}, v_{5}, v_{9}, v_{13})$ &
+    $\GG_{2}(v_{2}, v_{6}, v_{10}, v_{14})$ &
+    $\GG_{3}(v_{3}, v_{7}, v_{11}, v_{15})$ \\
+    $\GG_{4}(v_{0}, v_{5}, v_{10}, v_{15})$ &
+    $\GG_{5}(v_{1}, v_{6}, v_{11}, v_{12})$ &
+    $\GG_{6}(v_{2}, v_{7}, v_{8}, v_{13})$ &
+    $\GG_{7}(v_{3}, v_{4}, v_{9}, v_{14})$
+\end{tabular}
+\end{center}
+
+    That is, a round applies a G function to each of the columns in parallel,
+    and then to each of the diagonals in parallel. $\GG_i(a, b, c, d)$ is
+    defined as:
+
+\begin{align*}
+    a \ & \leftarrow \ a + b + m_{\sigma_r(2i)} \\
+    d \ & \leftarrow \ (d \oplus a) \ggg 16 \\
+    c \ & \leftarrow \ c + d \\
+    b \ & \leftarrow \ (b \oplus c) \ggg 12 \\
+    a \ & \leftarrow \ a + b + m_{\sigma_r(2i+1)} \\
+    d \ & \leftarrow \ (d \oplus a) \ggg 8 \\
+    c \ & \leftarrow \ c + d \\
+    b \ & \leftarrow \ (b \oplus c) \ggg 7
+\end{align*}
 
 \section{Rust Reference Implementation}\label{sec:referenceimpl}
 
