@@ -208,7 +208,7 @@ are:
 
 The compression function initializes its 16-word internal state $v_{0} \ldots
 v_{15}$ as follows. $\oplus$ denotes bitwise exclusive-or, and $\IV_{0} \ldots
-\IV_{7}$ are constants given in Appendix A.
+\IV_{7}$ are constants given in \ref{roundfn}.
 
 \begin{equation*}
 \begin{pmatrix}
@@ -229,7 +229,7 @@ t_{0} \oplus \IV_{4} & t_{1} \oplus \IV_{5} & b \oplus \IV_{6} & d \oplus \IV_{7
 The compression function applies the round function to its state and the
 message block 7 times, each time with a different message schedule. The round
 function and the message schedules for each round are the same as in BLAKE2s.
-They are reproduced in Appendix A.
+They are reproduced in \ref{roundfn}.
 
 After 7 rounds of compression, the new chaining value $h_{0}' \ldots h_{7}'$ is
 defined as:
@@ -446,6 +446,10 @@ TODO
 \bibliography{blake3}
 
 \begin{appendices}
+
+\section{Round Function}\label{sec:roundfn}
+
+TODO
 
 \section{Rust Reference Implementation}\label{sec:referenceimpl}
 
