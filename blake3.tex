@@ -271,6 +271,21 @@ the chaining value input for the following block. The new chaining value
 returned by compressing the last block of a chunk is the chaining value of that
 chunk.
 
+\subsection{Parent Node Chaining Values}\label{sec:chunk}
+
+Multiple chunks are joined into a tree using parent nodes. Each parent node has
+exactly two children, each either a chunk or another parent node. The chaining
+value of each parent node is given by a single call to the compression
+function. As with chunks above, if a key is used, the initial chaining value
+$h_{0} \ldots h_{7}$ for each parent node is the key words $k_{0} \ldots
+k_{7}$, otherwise it is $\IV_{0} \ldots \IV_{7}$. The message words $m_{0}
+\ldots m_{15}$ for a parent node are the concatenated chaining values of its
+two children, the left and then the right. The offset $t$ for a parent node is
+always 0. The value of $d$ is partly determined by the mode, described below,
+and parent nodes combine PARENT with $d$. If a parent node is the root of the
+tree, described below, it also combines ROOT with $d$. The new chaining value
+returned by this compression is the chaining value of the parent node.
+
 \subsection{Tree Structure}\label{sec:tree}
 
 BLAKE3 divides the input up into 4096-byte chunks. The final chunk may be shorter, but it's never empty unless the input itself is empty. The chunks are arranged as the leaves of a binary tree. All parent nodes have exactly two children, and the content of each parent node is the hash of its left child concatenated with the hash of its right child. When there's an odd number of nodes in a given level of the tree, the rightmost node is raised to the level above. Here's what the tree looks like as it grows from 1 to 4 chunks.
