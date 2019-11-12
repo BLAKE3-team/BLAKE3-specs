@@ -76,7 +76,7 @@
 
 %\maketitle
 \begin{center}
-{\huge BLAKE3: one function, embarrassingly parallel}
+{\huge BLAKE3: one function, fast everywhere}
 
 \bigskip
 
@@ -107,16 +107,16 @@ AUTHORS
       \textbf{Abstract.} We present the cryptographic hash function BLAKE3, an
       improved version of BLAKE2 and of its predecessor, the SHA\=/3 finalist
       BLAKE. BLAKE3 supports high degrees of parallelism, using an internal
-      tree structure that scales up to any number of SIMD lanes or CPU cores.
+      tree structure that scales up to any number of SIMD lanes and CPU cores.
       On Intel Kaby Lake, peak single-threaded throughput is 3x that of
       BLAKE2b, 4x that of SHA\=/2, and 8x that of SHA\=/3, and it can scale
       further using multiple threads. At the same time, BLAKE3 is efficient on
       smaller architectures and microcontrollers. Throughput on ARM Cortex-M0
       is 30\% higher than BLAKE2s or SHA\=/256, and 3x that of BLAKE2b,
-      SHA\=/512, or SHA\=/3. And unlike BLAKE2 and SHA\=/2, which are divided
-      into incompatible variants optimized for different architectures, BLAKE3
-      is a single hash function, designed to be consistently fast in software
-      across a wide variety of platforms and use cases.
+      SHA\=/512, or SHA\=/3. Unlike BLAKE2 and SHA\=/2, which have incompatible
+      variants optimized for different platforms, BLAKE3 is a single hash
+      function, designed to be consistently fast in software across a wide
+      variety of platforms and use cases.
 
    \end{minipage}
 \end{center}
@@ -125,39 +125,40 @@ AUTHORS
 
 \section{Introduction}\label{sec:intro}
 
-Since its introduction in 2012, BLAKE2 has seen widespread adoption, in large
+Since its announcement in 2012, BLAKE2 has seen widespread adoption, in large
 part because of its strong performance in software. BLAKE2b and BLAKE2s are
 included in OpenSSL and in the Python and Go standard libraries. BLAKE2b is
-also included as the \texttt{b2sum} utility in GNU Coreutils, and as the
-\texttt{generichash} API in Libsodium. And BLAKE2b is the underlying hash
-function for Argon2, the winner of the Password Hashing Competition in 2015.
+also included as the \texttt{b2sum} utility in GNU Coreutils, as the
+\texttt{generichash} API in Libsodium, and as underlying hash function for
+Argon2, the winner of the Password Hashing Competition in 2015.
 
-However, a drawback of BLAKE2 has been its large number of incompatible
-variants. The original BLAKE2 paper described 64-bit BLAKE2b, 32-bit BLAKE2s,
-the parallel variants BLAKE2bp and BLAKE2sp, and a framework for tree modes.
-The BLAKE2X paper added extendable output modes. None of these variants are
-compatible with each other, and choosing the right one for an application means
-understanding both the tradeoffs between them and also the state of language
-and library support. BLAKE2b is the most widely supported variant, although it
-is rarely the fastest on any particular platform. BLAKE2sp, which has the
-highest peak throughput on x86, is sparsely supported and almost never used.
+A drawback of BLAKE2 has been its large number of incompatible variants. The
+original BLAKE2 paper described 64-bit BLAKE2b, 32-bit BLAKE2s, the parallel
+variants BLAKE2bp and BLAKE2sp, and a framework for tree modes. The BLAKE2X
+paper added extendable output modes. None of these are compatible with each
+other, and choosing the right one for an application means understanding both
+the tradeoffs between them and also the state of language and library support.
+BLAKE2b, the most widely supported, is rarely the fastest on any particular
+platform. BLAKE2bp and BLAKE2sp, with much higher peak throughput on x86, are
+sparsely supported and almost never used.
 
 BLAKE3 eliminates this drawback. It is a single hash function with no variants,
-designed to support all the use cases of BLAKE2. Furthermore, it improves on
-performance, in some cases dramatically. On Intel Kaby Lake, peak throughput on
-a single core is triple that of BLAKE2b, and BLAKE3 can scale further to any
-number of cores. On ARM Cortex-M0, throughput is 30\% higher than BLAKE2s and
-again triple that of BLAKE2b.
+designed to support all the use cases of BLAKE2, as well as new use cases like
+streaming verification. Furthermore, it improves on performance, in some cases
+dramatically. On Intel Kaby Lake, peak throughput on a single core is triple
+that of BLAKE2b, and BLAKE3 can scale further to any number of cores. On ARM
+Cortex-M0, throughput is 30\% higher than BLAKE2s and again triple that of
+BLAKE2b.
 
 Internally, BLAKE3 divides its input into 2 KiB chunks and arranges those
-chunks as the leaves of a binary Merkle tree. This tree structure means that
-there is no limit to the parallelism that BLAKE3 can exploit, given enough
-input. The direct benefit of that parallelism is very high throughput on
-platforms with SIMD support, including all modern x86 processors. Another
-benefit of hashing chunks in parallel is that the implementation can use SIMD
-vectors of any width, regardless of the word size of the compression function.
-That leaves us free to use a compression function that is efficient on smaller
-architectures, without sacrificing performance on x86\=/64.
+chunks as the leaves of a binary tree. This tree structure means that there is
+no limit to the parallelism that BLAKE3 can exploit, given enough input. The
+direct benefit of that parallelism is very high throughput on platforms with
+SIMD support, including all modern x86 processors. Another benefit of hashing
+chunks in parallel is that the implementation can use SIMD vectors of any
+width, regardless of the word size of the compression function. That leaves us
+free to use a compression function that is efficient on smaller architectures,
+without sacrificing performance on x86\=/64.
 
 The BLAKE3 compression function is closely based on BLAKE2s. BLAKE3 has the
 same 128-bit security level and 256-bit default output size. The round function
@@ -186,8 +187,6 @@ The biggest changes from BLAKE2 to BLAKE3 are:
         parallelizable.
 \end{itemize}
 
-\nocite{DBLP:journals/iacr/AumassonNWW13,DBLP:journals/rfc/rfc7693,DBLP:journals/tosc/LuykxMN16}
-
 \section{Specification}\label{sec:specification}
 
 \subsection{Compression Function}\label{sec:compression}
@@ -208,7 +207,7 @@ are:
 
 The compression function initializes its 16-word internal state $v_{0} \ldots
 v_{15}$ as follows. $\oplus$ denotes bitwise exclusive-or, and $\IV_{0} \ldots
-\IV_{7}$ are constants given in \ref{roundfn}.
+\IV_{7}$ are constants given in appendix~\ref{sec:roundfn}.
 
 \begin{equation*}
 \begin{pmatrix}
@@ -228,8 +227,8 @@ t_{0} \oplus \IV_{4} & t_{1} \oplus \IV_{5} & b \oplus \IV_{6} & d \oplus \IV_{7
 
 The compression function applies the round function to its state and the
 message block 7 times, each time with a different message schedule. The round
-function and the message schedules for each round are the same as in BLAKE2s.
-They are reproduced in \ref{roundfn}.
+function and the message schedule for each round are the same as in BLAKE2s.
+They are reproduced in appendix~\ref{sec:roundfn}.
 
 After 7 rounds of compression, the new chaining value $h_{0}' \ldots h_{7}'$ is
 defined as:
@@ -442,6 +441,7 @@ There are two different approaches to using SIMD to speed up BLAKE2. The more co
 
 TODO
 
+\nocite{*}
 \bibliographystyle{plainurl}
 \bibliography{blake3}
 
