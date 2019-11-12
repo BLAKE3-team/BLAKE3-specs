@@ -1,7 +1,3 @@
-//! This reference implementation is written to be short and simple. It is not
-//! optimized for performance, and it does not use any parallelism. The
-//! throughput of this implementation is on par with OpenSSL SHA-256.
-
 const OUT_LEN: usize = 32;
 const KEY_LEN: usize = 32;
 const BLOCK_LEN: usize = 64;
@@ -46,7 +42,8 @@ fn bytes_from_words(words: &[u32], bytes: &mut [u8]) {
     }
 }
 
-// The mixing function, also called G, mixes either a column or a diagonal.
+// The mixing function, also called G, mixes two message words into either a
+// column or a diagonal of the state.
 fn mix(
     state: &mut [u32; 16],
     a: usize,
@@ -66,7 +63,9 @@ fn mix(
     state[b] = (state[b] ^ state[c]).rotate_right(7);
 }
 
-// The round function mixes all the columns, and then all the diagonals.
+// The round function mixes message words into each column of the 4x4 state,
+// and then into each diagonal. The ordering of the message words changes from
+// round to round according to the message schedule.
 fn round(state: &mut [u32; 16], msg: &[u32; 16], schedule: &[usize; 16]) {
     // Mix the columns.
     mix(state, 0, 4, 8, 12, msg[schedule[0]], msg[schedule[1]]);
@@ -80,8 +79,8 @@ fn round(state: &mut [u32; 16], msg: &[u32; 16], schedule: &[usize; 16]) {
     mix(state, 3, 4, 9, 14, msg[schedule[14]], msg[schedule[15]]);
 }
 
-// The compression function initializes a 16-word state and then performs 7
-// rounds of compression.
+// The compression function initializes a 16-word state, conceptually a 4x4
+// matrix, and then performs 7 rounds of compression.
 fn compress_inner(
     chaining_value: &[u32; 8],
     block_words: &[u32; 16],
@@ -290,7 +289,7 @@ fn hash_parent(
     }
 }
 
-/// An incremental BLAKE3 hash state, which can accept any number of writes.
+/// An incremental hasher, which can accept any number of writes.
 /// The maximum input length is 2^64-1 bytes.
 pub struct Hasher {
     // Space for 53 subtree chaining values: 2^53 * CHUNK_LEN = 2^64
