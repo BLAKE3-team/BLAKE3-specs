@@ -192,11 +192,10 @@ The biggest changes from BLAKE2 to BLAKE3 are:
 \subsection{Tree Structure}\label{sec:tree}
 
 BLAKE3 splits its input into chunks of up to 2048 bytes and arranges those
-chunks as the leaves of a binary tree. Only the last chunk may be shorter, and
-it is empty if and only if the entire input is empty. If there is only one
-chunk, that chunk is the root node and only node of the tree. Otherwise, the
-chunks are joined with parent nodes. The structure of the tree is determined by
-two rules:
+chunks as the leaves of a binary tree. The last chunk may be shorter, but not
+empty, unless the entire input is empty. If there is only one chunk, that chunk
+is the root node and only node of the tree. Otherwise, the chunks are joined
+with parent nodes. The structure of the tree is determined by two rules:
 \begin{itemize}
     \item Each left subtree is a complete binary tree, with all its chunks at
         the same depth, and number of chunks that is a power of 2.
@@ -260,13 +259,13 @@ of the input. BLAKE3 supports input of any byte length $0 \leq \ell < 2^{64}$.
 
 \subsection{Compression Function}\label{sec:compression}
 
-The compression function takes an 8-word intial chaining value and a 16-word
-message block, and it returns a new chaining value. Words are 4 bytes.
-Converting between bytes and words is done in little-endian order. The inputs
-to the compression function are:
+The compression function takes an 8-word chaining value and a 16-word message
+block, and it returns a new chaining value. Words are 4 bytes. Converting
+between bytes and words is done in little-endian order. The inputs to the
+compression function are:
 
 \begin{itemize}
-    \item The initial chaining value, $h = h_{0} \ldots h_{7}$.
+    \item The input chaining value, $h = h_{0} \ldots h_{7}$.
     \item The message block, $m = m_{0} \ldots m_{15}$.
     \item The number of input bytes in the block, $b$.
     \item A 64-bit offset, $t=t_{0},t_{1}$, with $t_{0}$ the lower order word
@@ -320,40 +319,40 @@ usage is described below.
 
 \subsection{Chunk Chaining Values}\label{sec:chunk}
 
-Each chunk, up to 2048 bytes, is split into blocks of up to 64 bytes. The last
-block of a each chunk is padded with zeros to be 64 bytes. The last block of a
-chunk is empty if and only if the chunk is empty, which is the case if and only
-if the entire input is empty. Each block is parsed in little-endian order into
-message words $m_{0} \ldots m_{15}$ and input into the compression function.
-The initial chaining value $h_{0} \ldots h_{7}$ for the first block of each
-chunk is the key words $k_{0} \ldots k_{7}$. (See Section~\ref{sec:modes} for
-more on key words.) The initial chaining value for subsequent blocks in each
-chunk is the output of the compression function for the previous block. The
-offset $t$ for each block is the starting byte index of its chunk, 0 for all
-blocks in the first chunk, 2048 for all blocks in the second chunk, and so on.
-The block length $b$ is the number of input bytes in each block prior to
-padding, 64 for all blocks except possibly the last block of the last chunk.
-The base value of $d$ is determined by the mode, as described below. The first
-block of each chunk combines the CHUNK\_START constant with $d$, and the last
-block of each chunk combines the CHUNK\_END constant with $d$. If a chunk
-contains only one block, that block combines both CHUNK\_START and CHUNK\_END
-with $d$. If a chunk is the root of its tree, the last block of that chunk also
-combines the ROOT constant with $d$. The output of the compression function for
-the last block in a chunk is the chaining value of that chunk.
+Each chunk of up to 2048 bytes is split into blocks of up to 64 bytes. The last
+block of the last chunk may be shorter, but not empty, unless the entire input
+is empty. The short block, if any, is padded with zeros to be 64 bytes. Each
+block is then parsed in little-endian order into message words $m_{0} \ldots
+m_{15}$ and input into the compression function. The input chaining value
+$h_{0} \ldots h_{7}$ for the first block of each chunk is the key words $k_{0}
+\ldots k_{7}$. (See Section~\ref{sec:modes} for more on key words.) The input
+chaining value for subsequent blocks in each chunk is the output of the
+compression function for the previous block. The offset $t$ for each block is
+the starting byte index of its chunk, 0 for all blocks in the first chunk, 2048
+for all blocks in the second chunk, and so on. The block length $b$ is the
+number of input bytes in each block, 64 for all blocks except the last block of
+the last chunk, which may be short. The base value of $d$ is determined by the
+mode, as described in Section~\ref{sec:modes}. The first block of each chunk
+combines the CHUNK\_START constant with $d$, and the last block of each chunk
+combines the CHUNK\_END constant with $d$. If a chunk contains only one block,
+that block combines both CHUNK\_START and CHUNK\_END with $d$. If a chunk is
+the root of its tree, the last block of that chunk also combines the ROOT
+constant with $d$. The output of the compression function for the last block in
+a chunk is the chaining value of that chunk.
 
 \subsection{Parent Node Chaining Values}\label{sec:parent}
 
 Each parent node has exactly two children, each either a chunk or another
 parent node. The chaining value of each parent node is given by a single call
-to the compression function. As with chunks above, the initial chaining value
+to the compression function. As with chunks above, the input chaining value
 $h_{0} \ldots h_{7}$ is the key words $k_{0} \ldots k_{7}$. The message words
 $m_{0} \ldots m_{15}$ are the concatenated chaining values of its two children,
 first the left then the right. The offset $t$ for parent nodes is always 0. The
 number of bytes $b$ for parent nodes is always 64. The base value of $d$ is
-determined by the mode, as described below, and parent nodes combine the PARENT
-constant with $d$. If a parent node is the root of the tree, it also combines
-the ROOT constant with $d$. The the output of the compression function is the
-chaining value of the parent node.
+determined by the mode, as described in Section~\ref{sec:modes}, and parent
+nodes combine the PARENT constant with $d$. If a parent node is the root of the
+tree, it also combines the ROOT constant with $d$. The the output of the
+compression function is the chaining value of the parent node.
 
 \subsection{Three Modes}\label{sec:modes}
 
@@ -378,6 +377,10 @@ application to isolate different components from each other in case a key is
 accidentally leaked. The BLAKE2 salt parameter is omitted, to discourage the
 use of BLAKE3 for hashing passwords.
 
+\subsection{Extended Output}\label{sec:extended}
+
+It's long :)
+
 \section{Performance}\label{sec:performance}
 
 It's fast :)
@@ -389,6 +392,10 @@ It's safe :)
 \section{Memory Requirement}\label{sec:memory}
 
 It's big :(
+
+\section{Implementation}\label{sec:memory}
+
+The trick with the 1 bits. Pretty diagram.
 
 \section{Applications}\label{sec:memory}
 
