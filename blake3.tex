@@ -129,7 +129,7 @@ Since its announcement in 2012, BLAKE2 has seen widespread adoption, in large
 part because of its strong performance in software. BLAKE2b and BLAKE2s are
 included in OpenSSL and in the Python and Go standard libraries. BLAKE2b is
 also included as the \texttt{b2sum} utility in GNU Coreutils, as the
-\texttt{generichash} API in Libsodium, and as underlying hash function for
+\texttt{generichash} API in Libsodium, and as the underlying hash function for
 Argon2, the winner of the Password Hashing Competition in 2015.
 
 A drawback of BLAKE2 has been its large number of incompatible variants. The
@@ -377,6 +377,30 @@ security than personalization at the point of use, because it allows an
 application to isolate different components from each other in case a key is
 accidentally leaked. The BLAKE2 salt parameter is omitted, to discourage the
 use of BLAKE3 for hashing passwords.
+
+\section{Performance}\label{sec:performance}
+
+It's fast :)
+
+\section{Security}\label{sec:security}
+
+It's safe :)
+
+\section{Memory Requirement}\label{sec:memory}
+
+It's big :(
+
+\section{Applications}\label{sec:memory}
+
+  \subsection{Message Authentication Codes}\label{sec:mac}
+
+  Comparison to HMAC (and HKDF).
+
+  \subsection{Streaming Verification}\label{sec:streamingverification}
+
+  Bao, basically.
+
+\section{Rationales}\label{sec:rationales}
 
 \nocite{*}
 \bibliographystyle{plainurl}
