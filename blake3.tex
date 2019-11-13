@@ -256,7 +256,7 @@ Figure~\ref{fig:fourchunks}.
 
 The compression function is used to derive a 32-byte chaining value from each
 chunk and parent node. The chaining value of the root node is the BLAKE3 hash
-of the input.
+of the input. BLAKE3 supports input of any byte length $0 \leq \ell < 2^{64}$.
 
 \subsection{Compression Function}\label{sec:compression}
 
@@ -362,7 +362,7 @@ chaining value of the parent node.
 
 \begin{appendices}
 
-\section{Round Function}\label{sec:roundfn}
+\section{Round Function and IV Constants}\label{sec:roundfn}
 
     The compression function transforms the internal state $v_{0} \ldots v_{15}$
     through a sequence of 7 rounds. The round function is the same as in
@@ -377,7 +377,7 @@ chaining value of the parent node.
     $\GG_{4}(v_{0}, v_{5}, v_{10}, v_{15})$ &
     $\GG_{5}(v_{1}, v_{6}, v_{11}, v_{12})$ &
     $\GG_{6}(v_{2}, v_{7}, v_{8}, v_{13})$ &
-    $\GG_{7}(v_{3}, v_{4}, v_{9}, v_{14})$
+    $\GG_{7}(v_{3}, v_{4}, v_{9}, v_{14})$ \\
 \end{tabular}
 \end{center}
 
@@ -395,6 +395,22 @@ chaining value of the parent node.
     c \ & \leftarrow \ c + d \\
     b \ & \leftarrow \ (b \oplus c) \ggg 7
 \end{align*}
+
+The message schedules $\sigma_r$ are:
+
+\begin{center}
+\begin{tabular}{ | r | r r r r r r r r r r r r r r r r | }
+    \hline
+    $\sigma_0$ & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 & 12 & 13 & 14 & 15 \\
+    $\sigma_1$ & 14 & 10 & 4 & 8 & 9 & 15 & 13 & 6 & 1 & 12 & 0 & 2 & 11 & 7 & 5 & 3 \\
+    $\sigma_2$ & 11 & 8 & 12 & 0 & 5 & 2 & 15 & 13 & 10 & 14 & 3 & 6 & 7 & 1 & 9 & 4 \\
+    $\sigma_3$ & 7 & 9 & 3 & 1 & 13 & 12 & 11 & 14 & 2 & 6 & 5 & 10 & 4 & 0 & 15 & 8 \\
+    $\sigma_4$ & 9 & 0 & 5 & 7 & 2 & 4 & 10 & 15 & 14 & 1 & 11 & 12 & 6 & 8 & 3 & 13 \\
+    $\sigma_5$ & 2 & 12 & 6 & 10 & 0 & 11 & 8 & 3 & 4 & 13 & 7 & 5 & 15 & 14 & 1 & 9 \\
+    $\sigma_6$ & 12 & 5 & 1 & 15 & 14 & 13 & 4 & 10 & 0 & 7 & 6 & 3 & 9 & 2 & 8 & 11 \\
+    \hline
+\end{tabular}
+\end{center}
 
 \section{Rust Reference Implementation}\label{sec:referenceimpl}
 
