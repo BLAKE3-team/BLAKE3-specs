@@ -368,18 +368,16 @@ chaining value of the parent node.
     through a sequence of 7 rounds. The round function is the same as in
     BLAKE2s. A round does:
 
-\begin{center}
-\begin{tabular}{ l l l l }
-    $\GG_{0}(v_{0}, v_{4}, v_{8}, v_{12})$ &
-    $\GG_{1}(v_{1}, v_{5}, v_{9}, v_{13})$ &
-    $\GG_{2}(v_{2}, v_{6}, v_{10}, v_{14})$ &
-    $\GG_{3}(v_{3}, v_{7}, v_{11}, v_{15})$ \\
-    $\GG_{4}(v_{0}, v_{5}, v_{10}, v_{15})$ &
-    $\GG_{5}(v_{1}, v_{6}, v_{11}, v_{12})$ &
-    $\GG_{6}(v_{2}, v_{7}, v_{8}, v_{13})$ &
-    $\GG_{7}(v_{3}, v_{4}, v_{9}, v_{14})$ \\
-\end{tabular}
-\end{center}
+\begin{align*}
+    \GG_{0}&(v_{0}, v_{4}, v_{8}, v_{12}) &
+    \GG_{1}&(v_{1}, v_{5}, v_{9}, v_{13}) &
+    \GG_{2}&(v_{2}, v_{6}, v_{10}, v_{14}) &
+    \GG_{3}&(v_{3}, v_{7}, v_{11}, v_{15}) \\
+    \GG_{4}&(v_{0}, v_{5}, v_{10}, v_{15}) &
+    \GG_{5}&(v_{1}, v_{6}, v_{11}, v_{12}) &
+    \GG_{6}&(v_{2}, v_{7}, v_{8}, v_{13}) &
+    \GG_{7}&(v_{3}, v_{4}, v_{9}, v_{14}) \\
+\end{align*}
 
     That is, a round applies a G function to each of the columns in parallel,
     and then to each of the diagonals in parallel. $\GG_i(a, b, c, d)$ is
