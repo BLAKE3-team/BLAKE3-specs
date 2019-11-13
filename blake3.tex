@@ -178,7 +178,7 @@ The biggest changes from BLAKE2 to BLAKE3 are:
     \item The compression function uses \textbf{fewer rounds}.
     \item In lieu of a parameter block, the BLAKE3 API supports \textbf{three
         domain-separated modes}: \texttt{hash(input)},
-        \texttt{keyed\_hash(input, key)}, and \texttt{derive\_key(key,
+        \texttt{keyed\_hash(key, input)}, and \texttt{derive\_key(key,
         context)}. These modes differ only in the internal flag bits they set.
     \item The space formerly occupied by the parameter block is now used for
         the optional 256-bit key, so \textbf{keying is zero-cost}.
