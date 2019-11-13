@@ -364,10 +364,9 @@ chaining value of the parent node.
 
 \section{Round Function and IV Constants}\label{sec:roundfn}
 
-    The compression function transforms the internal state $v_{0} \ldots v_{15}$
-    through a sequence of 7 rounds. The round function is the same as in
-    BLAKE2s. A round does:
-
+The compression function transforms the internal state $v_{0} \ldots
+v_{15}$ through a sequence of 7 rounds. The round function is the same as
+in BLAKE2s. A round does:
 \begin{align*}
     \GG_{0}&(v_{0}, v_{4}, v_{8}, v_{12}) &
     \GG_{1}&(v_{1}, v_{5}, v_{9}, v_{13}) &
@@ -376,13 +375,12 @@ chaining value of the parent node.
     \GG_{4}&(v_{0}, v_{5}, v_{10}, v_{15}) &
     \GG_{5}&(v_{1}, v_{6}, v_{11}, v_{12}) &
     \GG_{6}&(v_{2}, v_{7}, v_{8}, v_{13}) &
-    \GG_{7}&(v_{3}, v_{4}, v_{9}, v_{14}) \\
+    \GG_{7}&(v_{3}, v_{4}, v_{9}, v_{14})
 \end{align*}
 
-    That is, a round applies a G function to each of the columns in parallel,
-    and then to each of the diagonals in parallel. $\GG_i(a, b, c, d)$ is
-    defined as:
-
+That is, a round applies a G function to each of the columns in parallel,
+and then to each of the diagonals in parallel. $\GG_i(a, b, c, d)$ is
+defined as:
 \begin{align*}
     a \ & \leftarrow \ a + b + m_{\sigma_r(2i)} \\
     d \ & \leftarrow \ (d \oplus a) \ggg 16 \\
@@ -409,6 +407,19 @@ The message schedules $\sigma_r$ are:
     \hline
 \end{tabular}
 \end{center}
+
+The constants $\IV_0 \ldots \IV_7$ used by the compression function are:
+
+\begin{align*}
+    \IV_0 &= \text{\texttt{0x6a09e667}} &
+    \IV_1 &= \text{\texttt{0xbb67ae85}} \\
+    \IV_2 &= \text{\texttt{0x3c6ef372}} &
+    \IV_3 &= \text{\texttt{0xa54ff53a}} \\
+    \IV_4 &= \text{\texttt{0x510e527f}} &
+    \IV_5 &= \text{\texttt{0x9b05688c}} \\
+    \IV_6 &= \text{\texttt{0x1f83d9ab}} &
+    \IV_7 &= \text{\texttt{0x5be0cd19}}
+\end{align*}
 
 \section{Rust Reference Implementation}\label{sec:referenceimpl}
 
