@@ -324,16 +324,16 @@ Each chunk, up to 2048 bytes, is split into blocks of up to 64 bytes. The last
 block of a each chunk is padded with zeros to be 64 bytes. The last block of a
 chunk is empty if and only if the chunk is empty, which is the case if and only
 if the entire input is empty. Each block is parsed in little-endian order into
-message words $m_{0} \ldots m_{15}$ and input into the compression function. If
-a key is used, the initial chaining value $h_{0} \ldots h_{7}$ for the first
-block of each chunk is the key words $k_{0} \ldots k_{7}$, otherwise it is
-$\IV_{0} \ldots \IV_{7}$. The initial chaining value for subsequent blocks in
-each chunk is the output of the compression function for the previous block.
-The offset $t$ for each block is the starting byte index of its chunk, 0 for
-all blocks in the first chunk, 2048 for all blocks in the second chunk, and so
-on. The block length $b$ is the number of input bytes in each block prior to
+message words $m_{0} \ldots m_{15}$ and input into the compression function.
+The initial chaining value $h_{0} \ldots h_{7}$ for the first block of each
+chunk is the key words $k_{0} \ldots k_{7}$. (See Section~\ref{sec:modes} for
+more on key words.) The initial chaining value for subsequent blocks in each
+chunk is the output of the compression function for the previous block. The
+offset $t$ for each block is the starting byte index of its chunk, 0 for all
+blocks in the first chunk, 2048 for all blocks in the second chunk, and so on.
+The block length $b$ is the number of input bytes in each block prior to
 padding, 64 for all blocks except possibly the last block of the last chunk.
-The value of $d$ is partly determined by the mode, described below. The first
+The base value of $d$ is determined by the mode, as described below. The first
 block of each chunk combines the CHUNK\_START constant with $d$, and the last
 block of each chunk combines the CHUNK\_END constant with $d$. If a chunk
 contains only one block, that block combines both CHUNK\_START and CHUNK\_END
@@ -341,20 +341,42 @@ with $d$. If a chunk is the root of its tree, the last block of that chunk also
 combines the ROOT constant with $d$. The output of the compression function for
 the last block in a chunk is the chaining value of that chunk.
 
-\subsection{Parent Node Chaining Values}\label{sec:chunk}
+\subsection{Parent Node Chaining Values}\label{sec:parent}
 
 Each parent node has exactly two children, each either a chunk or another
 parent node. The chaining value of each parent node is given by a single call
-to the compression function. As with chunks above, if a key is used, the
-initial chaining value $h_{0} \ldots h_{7}$ is the key words $k_{0} \ldots
-k_{7}$, otherwise it is $\IV_{0} \ldots \IV_{7}$. The message words $m_{0}
-\ldots m_{15}$ are the concatenated chaining values of its two children, first
-the left then the right. The offset $t$ for parent nodes is always 0. The
-number of bytes $b$ for parent nodes is always 64. The value of $d$ is partly
-determined by the mode, described below, and parent nodes combine the PARENT
+to the compression function. As with chunks above, the initial chaining value
+$h_{0} \ldots h_{7}$ is the key words $k_{0} \ldots k_{7}$. The message words
+$m_{0} \ldots m_{15}$ are the concatenated chaining values of its two children,
+first the left then the right. The offset $t$ for parent nodes is always 0. The
+number of bytes $b$ for parent nodes is always 64. The base value of $d$ is
+determined by the mode, as described below, and parent nodes combine the PARENT
 constant with $d$. If a parent node is the root of the tree, it also combines
 the ROOT constant with $d$. The the output of the compression function is the
 chaining value of the parent node.
+
+\subsection{Three Modes}\label{sec:modes}
+
+BLAKE3 defines three domain-separated modes: \textbf{hash},
+\textbf{keyed\_hash}, and \textbf{derive\_key}. The modes differ from each
+other in what key words they use and in how they set the base value of $d$, the
+domain flags word, for all calls to the compression function. In the
+\textbf{hash} mode, the 8 key words are the constants $\IV_0 \ldots \IV_7$, and
+the base value of $d$ is 0. In the \textbf{keyed\_hash} mode, the 8 key words
+are parsed in little-endian order from a 32-byte key given by the caller, and
+the base value of $d$ is the KEYED\_HASH constant. And in the
+\textbf{derive\_key} mode, the key is again given by the caller, and the base
+value of $d$ is DERIVE\_KEY.
+
+In the \textbf{derive\_key} mode, the input should be a globally unique,
+application-specific context string. A good default format for such strings is
+"[organization] [date] [purpose]", e.g. "example.com 2019-12-25 16:18:03 API
+session tokens v1". This mode is intended to support the most common use cases
+of the BLAKE2 personalization parameter. Key derivation can provide better
+security than personalization at the point of use, because it allows an
+application to isolate different components from each other in case a key is
+accidentally leaked. The BLAKE2 salt parameter is omitted, to discourage the
+use of BLAKE3 for hashing passwords.
 
 \nocite{*}
 \bibliographystyle{plainurl}
