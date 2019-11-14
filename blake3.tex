@@ -343,12 +343,6 @@ KEYED\_HASH flag is set for every compression. In the \textbf{derive\_key}
 mode, the key is again given by the caller, and the DERIVE\_KEY flag is set for
 every compression.
 
-For the \textbf{derive\_key} mode, the input should be a hardcoded, globally
-unique, application-specific context string. A good default format for such
-strings is "[application] [date] [purpose]", e.g. "example.com 2019-12-25
-16:18:03 session tokens v1". This mode is intended for use cases similar to the
-BLAKE2 personalization parameter.
-
 \subsection{Chunk Chaining Values}\label{sec:chunk}
 
 Processing a chunk is structurally similar to processing input in BLAKE2s or
@@ -446,29 +440,59 @@ It's big :(
 
 \section{Implementation}\label{sec:memory}
 
-  \subsection{SIMD}\label{sec:mac}
+\subsection{SIMD}\label{sec:mac}
 
-  Efficient parallel chunk hashing.
+Efficient parallel chunk hashing.
 
-  \subsection{Incremental Hashing}\label{sec:mac}
+\subsection{Incremental Hashing}\label{sec:mac}
 
-  Comparison to HMAC (and HKDF).
+Comparison to HMAC (and HKDF).
 
 The trick with the 1 bits. Pretty diagram.
 
 \section{Applications}\label{sec:memory}
 
-  \subsection{Message Authentication Codes}\label{sec:mac}
+\subsection{Message Authentication Codes}\label{sec:mac}
 
-  Comparison to HMAC (and HKDF).
+Like BLAKE2, BLAKE3 has explicit support for a keyed mode,
+\textbf{keyed\_hash}. This removes the need for a separate construction like
+HMAC. The \textbf{keyed\_hash} mode is also more efficient than keyed BLAKE2 or
+HMAC for short messages. BLAKE2 requires an extra compression for the key, and
+HMAC requires three extra compressions. The \textbf{keyed\_hash} mode in
+BLAKE3, however, requires no extra compressions.
 
-  \subsection{Streaming Verification}\label{sec:streamingverification}
+\subsection{Key Derivation}\label{sec:mac}
 
-  Bao, basically.
+BLAKE3 has explicit support for a key derivation mode, \textbf{derive\_key}.
+This mode is intended to replace the BLAKE2 personalization parameter for its
+most common use cases. Key derivation can encourage better security than
+personalization, by cryptographically isolating different components of an
+application from one another. This limits the damage if one component
+accidentally leaks its key.
 
-  \subsection{Incremental Update}\label{sec:incrementalupdate}
+For \textbf{derive\_key}, the input should be a hardcoded, globally unique,
+application-specific context string. A good default format for such strings is
+"[application] [date] [purpose]", e.g. "example.com 2019-12-25 16:18:03 session
+tokens v1".
 
-  Giant disk images.
+Like \textbf{keyed\_hash}, \textbf{derive\_key} requires no extra compressions.
+For context strings up to 64 bytes and derived key lengths up to 64 bytes,
+\textbf{derive\_key} is a single compression.
+
+When an application needs to use a key in multiple algorithms or contexts, the
+best practice is to make a derived key for each use case. However, because the
+BLAKE3 modes are domain-separated, it is possible to use the same key with
+\textbf{keyed\_hash} and also with \textbf{derive\_key}. That can be necessary
+when an application adds a new use case for an existing key, if the original
+use case did not include a key derivation step.
+
+\subsection{Streaming Verification}\label{sec:streamingverification}
+
+Bao, basically.
+
+\subsection{Incremental Update}\label{sec:incrementalupdate}
+
+Giant disk images.
 
 \section{Rationales}\label{sec:rationales}
 
