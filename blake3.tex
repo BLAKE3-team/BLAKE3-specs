@@ -327,7 +327,7 @@ The domain separation flags used for $d$ are:
     \text{DERIVE\_KEY}  & 32
 \end{tabular}
 \end{center}
-The value of $d$ is the bitwise exclusive-or of all the flags set for a given
+The value of $d$ is the bitwise-or of all the flags set for a given
 compression. Their usage is described below.
 
 \subsection{Modes}\label{sec:modes}
@@ -445,6 +445,14 @@ It's safe :)
 It's big :(
 
 \section{Implementation}\label{sec:memory}
+
+  \subsection{SIMD}\label{sec:mac}
+
+  Efficient parallel chunk hashing.
+
+  \subsection{Incremental Hashing}\label{sec:mac}
+
+  Comparison to HMAC (and HKDF).
 
 The trick with the 1 bits. Pretty diagram.
 
