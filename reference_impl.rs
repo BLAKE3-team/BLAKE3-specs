@@ -4,8 +4,6 @@ const BLOCK_LEN: usize = 64;
 const CHUNK_LEN: usize = 2048;
 const ROUNDS: usize = 7;
 
-// The domain separation flags distinguish different node types and also the
-// keyed and key derivation modes. Flags are combined with exclusive-or.
 const CHUNK_START: u32 = 1 << 0;
 const CHUNK_END: u32 = 1 << 1;
 const PARENT: u32 = 1 << 2;
@@ -42,45 +40,31 @@ fn bytes_from_words(words: &[u32], bytes: &mut [u8]) {
     }
 }
 
-// The mixing function, also called G, mixes two message words into either a
-// column or a diagonal of the state.
-fn mix(
-    state: &mut [u32; 16],
-    a: usize,
-    b: usize,
-    c: usize,
-    d: usize,
-    m1: u32,
-    m2: u32,
-) {
-    state[a] = state[a].wrapping_add(state[b]).wrapping_add(m1);
+fn g(state: &mut [u32; 16], indices: [usize; 4], mx: u32, my: u32) {
+    let [a, b, c, d] = indices;
+    state[a] = state[a].wrapping_add(state[b]).wrapping_add(mx);
     state[d] = (state[d] ^ state[a]).rotate_right(16);
     state[c] = state[c].wrapping_add(state[d]);
     state[b] = (state[b] ^ state[c]).rotate_right(12);
-    state[a] = state[a].wrapping_add(state[b]).wrapping_add(m2);
+    state[a] = state[a].wrapping_add(state[b]).wrapping_add(my);
     state[d] = (state[d] ^ state[a]).rotate_right(8);
     state[c] = state[c].wrapping_add(state[d]);
     state[b] = (state[b] ^ state[c]).rotate_right(7);
 }
 
-// The round function mixes message words into each column of the 4x4 state,
-// and then into each diagonal. The ordering of the message words changes from
-// round to round according to the message schedule.
-fn round(state: &mut [u32; 16], msg: &[u32; 16], schedule: &[usize; 16]) {
+fn round(state: &mut [u32; 16], m: &[u32; 16], schedule: &[usize; 16]) {
     // Mix the columns.
-    mix(state, 0, 4, 8, 12, msg[schedule[0]], msg[schedule[1]]);
-    mix(state, 1, 5, 9, 13, msg[schedule[2]], msg[schedule[3]]);
-    mix(state, 2, 6, 10, 14, msg[schedule[4]], msg[schedule[5]]);
-    mix(state, 3, 7, 11, 15, msg[schedule[6]], msg[schedule[7]]);
+    g(state, [0, 4, 8, 12], m[schedule[0]], m[schedule[1]]);
+    g(state, [1, 5, 9, 13], m[schedule[2]], m[schedule[3]]);
+    g(state, [2, 6, 10, 14], m[schedule[4]], m[schedule[5]]);
+    g(state, [3, 7, 11, 15], m[schedule[6]], m[schedule[7]]);
     // Mix the diagonals.
-    mix(state, 0, 5, 10, 15, msg[schedule[8]], msg[schedule[9]]);
-    mix(state, 1, 6, 11, 12, msg[schedule[10]], msg[schedule[11]]);
-    mix(state, 2, 7, 8, 13, msg[schedule[12]], msg[schedule[13]]);
-    mix(state, 3, 4, 9, 14, msg[schedule[14]], msg[schedule[15]]);
+    g(state, [0, 5, 10, 15], m[schedule[8]], m[schedule[9]]);
+    g(state, [1, 6, 11, 12], m[schedule[10]], m[schedule[11]]);
+    g(state, [2, 7, 8, 13], m[schedule[12]], m[schedule[13]]);
+    g(state, [3, 4, 9, 14], m[schedule[14]], m[schedule[15]]);
 }
 
-// The compression function initializes a 16-word state, conceptually a 4x4
-// matrix, and then performs 7 rounds of compression.
 fn compress_inner(
     chaining_value: &[u32; 8],
     block_words: &[u32; 16],
@@ -127,31 +111,26 @@ fn compress(
     }
 }
 
-// The extended compression function writes up to 64 bytes of output. Note that
-// the first 32 bytes are the same as the new chaining value returned by the
-// standard compression function.
+// The extended compression function returns a new 16-word extended chaining
+// value. Note that the first 8 words are the same as compress().
 fn compress_extended(
     chaining_value: &[u32; 8],
     block_words: &[u32; 16],
     block_len: usize,
     offset: u64,
     flags: u32,
-    output: &mut [u8],
-) {
+) -> [u32; 16] {
     let mut state =
         compress_inner(chaining_value, block_words, block_len, offset, flags);
     for i in 0..8 {
         state[i] ^= state[i + 8];
         state[i + 8] ^= chaining_value[i];
     }
-    bytes_from_words(&state, output);
+    state
 }
 
-// An Output represents either the final compression step of a chunk, or the
-// single compression step a parent node. It can produce either a 32-byte
-// chaining value, or any number of extended output bytes.
 struct Output {
-    prev_chaining_value: [u32; 8],
+    input_chaining_value: [u32; 8],
     block_words: [u32; 16],
     block_len: usize,
     offset: u64,
@@ -160,34 +139,34 @@ struct Output {
 
 impl Output {
     fn chaining_value(&self) -> [u32; 8] {
-        let mut chaining_value = self.prev_chaining_value;
+        let mut cv = self.input_chaining_value;
         compress(
-            &mut chaining_value,
+            &mut cv,
             &self.block_words,
             self.block_len,
             self.offset,
             self.flags,
         );
-        chaining_value
+        cv
     }
 
-    fn extend_output(&self, output: &mut [u8]) {
+    fn root_output(&self, out_slice: &mut [u8]) {
         let mut offset = self.offset;
-        for out_slice in output.chunks_mut(2 * OUT_LEN) {
-            compress_extended(
-                &self.prev_chaining_value,
+        for out_block in out_slice.chunks_mut(2 * OUT_LEN) {
+            // For outputs 32 bytes or less, compress() could also work here.
+            let words = compress_extended(
+                &self.input_chaining_value,
                 &self.block_words,
                 self.block_len,
                 offset,
-                self.flags,
-                out_slice,
+                self.flags | ROOT,
             );
+            bytes_from_words(&words, out_block);
             offset += 2 * OUT_LEN as u64;
         }
     }
 }
 
-// The incremental hash state of the current chunk.
 struct ChunkState {
     chaining_value: [u32; 8],
     offset: u64,
@@ -209,7 +188,6 @@ impl ChunkState {
         }
     }
 
-    // The CHUNK_START domain flag, if this is the first block of the chunk.
     fn start_flag(&self) -> u32 {
         if self.total_len <= BLOCK_LEN {
             CHUNK_START
@@ -218,11 +196,8 @@ impl ChunkState {
         }
     }
 
-    // Add input bytes to this chunk.
     fn update(&mut self, mut input: &[u8]) {
         while !input.is_empty() {
-            // If the buffer is full, and there's more input coming, compress
-            // it and clear it.
             if self.block_len == BLOCK_LEN {
                 let mut block_words = [0; 16];
                 words_from_bytes(&self.block, &mut block_words);
@@ -238,7 +213,6 @@ impl ChunkState {
                 self.block_len = 0;
             }
 
-            // Buffer as many input bytes as possible.
             let want = BLOCK_LEN - self.block_len;
             let take = core::cmp::min(want, input.len());
             self.block[self.block_len as usize..][..take]
@@ -249,16 +223,12 @@ impl ChunkState {
         }
     }
 
-    // Construct the Output object for this chunk. That object will perform the
-    // final compression.
-    fn finalize(&self, is_root: bool) -> Output {
+    fn output(&self) -> Output {
         let mut block_words = [0; 16];
         words_from_bytes(&self.block, &mut block_words);
-        let root_flag = if is_root { ROOT } else { 0 };
-        let block_flags =
-            self.flags | self.start_flag() | CHUNK_END | root_flag;
+        let block_flags = self.flags | self.start_flag() | CHUNK_END;
         Output {
-            prev_chaining_value: self.chaining_value,
+            input_chaining_value: self.chaining_value,
             block_words,
             block_len: self.block_len,
             offset: self.offset,
@@ -267,30 +237,26 @@ impl ChunkState {
     }
 }
 
-// Construct a parent Output from its left and right child chaining values.
 fn hash_parent(
-    left_child: &[u32; 8],
-    right_child: &[u32; 8],
+    left_child_cv: &[u32; 8],
+    right_child_cv: &[u32; 8],
     key: &[u32; 8],
-    is_root: bool,
     flags: u32,
 ) -> Output {
-    let root_flag = if is_root { ROOT } else { 0 };
     let mut block_words = [0; 16];
-    block_words[..8].copy_from_slice(left_child);
-    block_words[8..].copy_from_slice(right_child);
+    block_words[..8].copy_from_slice(left_child_cv);
+    block_words[8..].copy_from_slice(right_child_cv);
     Output {
-        prev_chaining_value: *key,
+        input_chaining_value: *key,
         block_words,
         block_len: BLOCK_LEN,
         // Note that the offset parameter is always zero for parent nodes.
         offset: 0,
-        flags: PARENT | root_flag | flags,
+        flags: PARENT | flags,
     }
 }
 
-/// An incremental hasher, which can accept any number of writes.
-/// The maximum input length is 2^64-1 bytes.
+/// An incremental hasher that can accept any number of writes.
 pub struct Hasher {
     // Space for 53 subtree chaining values: 2^53 * CHUNK_LEN = 2^64
     subtree_stack: [[u32; 8]; 53],
@@ -321,9 +287,7 @@ impl Hasher {
         Self::new_internal(&key_words, KEYED_HASH)
     }
 
-    /// Construct a new Hasher for the key derivation function. The input
-    /// supplied to update() should then be a globally unique,
-    /// application-specific context string.
+    /// Construct a new Hasher for the key derivation function.
     pub fn new_derive_key(key: &[u8; KEY_LEN]) -> Self {
         let mut key_words = [0; 8];
         words_from_bytes(key, &mut key_words);
@@ -339,7 +303,6 @@ impl Hasher {
             left_child,
             right_child,
             &self.key,
-            false,
             self.chunk_state.flags,
         )
         .chaining_value();
@@ -347,15 +310,13 @@ impl Hasher {
         self.num_subtrees -= 1;
     }
 
-    // Add a finalized chunk chaining value to the subtree stack.
     fn push_chunk_chaining_value(&mut self, cv: &[u32; 8], total_bytes: u64) {
         self.subtree_stack[self.num_subtrees as usize] = *cv;
         self.num_subtrees += 1;
         // After pushing the new chunk hash onto the subtree stack, hash as
-        // many parent nodes as we can. We know there is at least one more
-        // chunk to come, so these are non-root parent hashes. The number of 1
-        // bits in the total number of chunks so far is the same as the number
-        // of subtrees that should remain in the stack.
+        // many parent nodes as we can. The number of 1 bits in the total
+        // number of chunks so far is the same as the number of subtrees that
+        // should remain in the stack.
         let total_chunks = total_bytes / CHUNK_LEN as u64;
         while self.num_subtrees > total_chunks.count_ones() as usize {
             self.merge_two_subtrees();
@@ -365,11 +326,8 @@ impl Hasher {
     /// Add input to the hash state. This can be called any number of times.
     pub fn update(&mut self, mut input: &[u8]) {
         while !input.is_empty() {
-            // If the current chunk is full, and there's more input coming,
-            // finalize it and push its hash into the subtree stack.
             if self.chunk_state.total_len == CHUNK_LEN {
-                let chunk_cv =
-                    self.chunk_state.finalize(false).chaining_value();
+                let chunk_cv = self.chunk_state.output().chaining_value();
                 let new_chunk_offset =
                     self.chunk_state.offset + CHUNK_LEN as u64;
                 self.push_chunk_chaining_value(&chunk_cv, new_chunk_offset);
@@ -380,7 +338,6 @@ impl Hasher {
                 );
             }
 
-            // Add as many bytes as possible to the current chunk.
             let want = CHUNK_LEN - self.chunk_state.total_len;
             let take = core::cmp::min(want, input.len());
             self.chunk_state.update(&input[..take]);
@@ -388,51 +345,39 @@ impl Hasher {
         }
     }
 
-    // Construct the root Output object, with the ROOT flag set. If there is
-    // only one chunk of input, this it the Output of that chunk. Otherwise it
-    // is the output of the root parent node.
-    fn finalize_inner(&self) -> Output {
+    /// Finalize the hash and write any number of output bytes.
+    pub fn finalize_extended(&self, out_slice: &mut [u8]) {
         // If the subtree stack is empty, then the current chunk is the root.
         if self.num_subtrees == 0 {
-            return self.chunk_state.finalize(true);
+            self.chunk_state.output().root_output(out_slice);
+            return;
         }
 
-        // Otherwise, finish the current chunk, and then merge all the subtrees
-        // along the right edge of the tree. Unlike update(), these subtrees
-        // may not be complete.
-        let mut right_child = self.chunk_state.finalize(false).chaining_value();
-        let mut remaining = self.num_subtrees;
+        // Otherwise, finalize the current chunk, and then merge all the
+        // subtrees along the right edge of the tree.
+        let mut right_child = self.chunk_state.output().chaining_value();
+        let mut subtrees_remaining = self.num_subtrees;
         loop {
-            let left_child = &self.subtree_stack[remaining - 1];
-            let is_root = remaining == 1;
+            let left_child = &self.subtree_stack[subtrees_remaining - 1];
             let output = hash_parent(
                 left_child,
                 &right_child,
                 &self.key,
-                is_root,
                 self.chunk_state.flags,
             );
-            if is_root {
-                return output;
+            if subtrees_remaining == 1 {
+                output.root_output(out_slice);
+                return;
             }
             right_child = output.chaining_value();
-            remaining -= 1;
+            subtrees_remaining -= 1;
         }
     }
 
-    /// Finalize the hash and return a 32-byte output. Note that this method
-    /// does not mutate the Hasher, and calling it twice gives the same result.
+    /// Finalize the hash and return a 32-byte output.
     pub fn finalize(&self) -> [u8; OUT_LEN] {
-        let cv = self.finalize_inner().chaining_value();
         let mut bytes = [0; OUT_LEN];
-        bytes_from_words(&cv, &mut bytes);
+        self.finalize_extended(&mut bytes);
         bytes
-    }
-
-    /// Finalize the hash and write any number of output bytes. Note that this
-    /// method does not mutate the Hasher, and calling it twice gives the same
-    /// result.
-    pub fn finalize_extended(&self, output: &mut [u8]) {
-        self.finalize_inner().extend_output(output);
     }
 }
