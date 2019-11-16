@@ -249,12 +249,8 @@ Figure~\ref{fig:fourchunks}.
 \draw[-latex] (parent2) -- (parent3);
 
 \end{tikzpicture}
-    \caption{
-        Example tree structures, from 1 to 4 chunks. Note that blocks are
-        always added along the right edge of the tree, meaning that any left
-        subtree is stable as the tree grows.
-    }
-    \label{fig:fourchunks}
+\caption{Example tree structures, from 1 to 4 chunks.}
+\label{fig:fourchunks}
 \end{figure}
 
 The compression function is used to derive an 8-word chaining value from each
@@ -271,9 +267,9 @@ the compression function are:
 \begin{itemize}
     \item The input chaining value, $h_{0} \ldots h_{7}$.
     \item The message block, $m_{0} \ldots m_{15}$.
-    \item The number of input bytes in the block, $b$.
     \item A 64-bit offset, $t=t_{0},t_{1}$, with $t_{0}$ the lower order word
         and $t_{1}$ the higher order word.
+    \item The number of input bytes in the block, $b$.
     \item A set of domain separation bit flags, $d$.
 \end{itemize}
 
@@ -334,11 +330,11 @@ compression. Their usage is described below.
 
 BLAKE3 defines three domain-separated modes: \textbf{hash},
 \textbf{keyed\_hash}, and \textbf{derive\_key}. The modes differ from each
-other in the key words $k_{0} \ldots k_{7}$ they use and the additional flags
-they set for every call to the compression function. In the \textbf{hash} mode,
+other in their key words $k_{0} \ldots k_{7}$ and in the additional flags they
+set for every call to the compression function. In the \textbf{hash} mode,
 $k_{0} \ldots k_{7}$ are the constants $\IV_0 \ldots \IV_7$, and no additional
 flags are set. In the \textbf{keyed\_hash} mode, $k_{0} \ldots k_{7}$ are
-parsed in little-endian order from a 32-byte key given by the caller, and the
+parsed in little-endian order from the 32-byte key given by the caller, and the
 KEYED\_HASH flag is set for every compression. In the \textbf{derive\_key}
 mode, the key is again given by the caller, and the DERIVE\_KEY flag is set for
 every compression.
