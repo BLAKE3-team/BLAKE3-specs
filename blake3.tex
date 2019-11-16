@@ -158,17 +158,17 @@ SIMD support, including all modern x86 processors. Another benefit of hashing
 chunks in parallel is that the implementation can use SIMD vectors of any
 width, regardless of the word size of the compression function. That leaves us
 free to use a compression function that is efficient on smaller architectures,
-without sacrificing performance on x86\=/64.
+without sacrificing peak throughput on x86\=/64.
 
 The BLAKE3 compression function is closely based on BLAKE2s. BLAKE3 has the
 same 128-bit security level and 256-bit default output size. The round function
-is identical, along with the IV constants and the message schedule. Thus, all
-the cryptanalysis of BLAKE2 applies directly to BLAKE3. Based on that analysis
-and with the benefit of hindsight, we believe that BLAKE2 is overly
-conservative in its number of rounds, and BLAKE3 reduces the number of rounds
-from 10 to 7. BLAKE3 also changes the setup and finalization steps of the
-compression function to support the internal tree structure, more efficient
-keying, and extendable output.
+is identical, along with the IV constants and the message schedule. Thus,
+cryptanalysis of BLAKE2 applies directly to BLAKE3. Based on that analysis and
+with the benefit of hindsight, we believe that BLAKE2 is overly conservative in
+its number of rounds, and BLAKE3 reduces the number of rounds from 10 to 7.
+BLAKE3 also changes the setup and finalization steps of the compression
+function to support the internal tree structure, more efficient keying, and
+extendable output.
 
 The biggest changes from BLAKE2 to BLAKE3 are:
 
@@ -442,13 +442,12 @@ It's big :(
 
 \subsection{SIMD}\label{sec:mac}
 
-Efficient parallel chunk hashing.
+How to do efficient parallel chunk hashing.
 
 \subsection{Incremental Hashing}\label{sec:mac}
 
-Comparison to HMAC (and HKDF).
-
-The trick with the 1 bits. Pretty diagram.
+How to merge subtrees, using that trick with counting 1 bits. Include a pretty
+diagram.
 
 \section{Applications}\label{sec:memory}
 
@@ -458,27 +457,27 @@ Like BLAKE2, BLAKE3 has explicit support for a keyed mode,
 \textbf{keyed\_hash}. This removes the need for a separate construction like
 HMAC. The \textbf{keyed\_hash} mode is also more efficient than keyed BLAKE2 or
 HMAC for short messages. BLAKE2 requires an extra compression for the key, and
-HMAC requires three extra compressions. The \textbf{keyed\_hash} mode in
-BLAKE3, however, requires no extra compressions.
+HMAC requires three extra compressions. The \textbf{keyed\_hash} mode in BLAKE3
+does not require any extra compressions.
 
 \subsection{Key Derivation}\label{sec:mac}
 
 BLAKE3 has explicit support for a key derivation mode, \textbf{derive\_key}.
 This mode is intended to replace the BLAKE2 personalization parameter for its
-most common use cases. Key derivation can encourage better security than
-personalization, by cryptographically isolating different components of an
-application from one another. This limits the damage if one component
-accidentally leaks its key.
+most common use cases. Like \textbf{keyed\_hash}, \textbf{derive\_key} does not
+require any extra compressions. For context strings up to 64 bytes and derived
+key lengths up to 64 bytes, \textbf{derive\_key} is a single compression.
 
-For \textbf{derive\_key}, the input should be a hardcoded, globally unique,
+The input to \textbf{derive\_key} should be a hardcoded, globally unique,
 application-specific context string. A good default format for such strings is
-"[application] [date] [purpose]", e.g. "example.com 2019-12-25 16:18:03 session
-tokens v1".
+"[application] [timestamp] [purpose]", e.g. "example.com 2019-12-25 16:18:03
+session tokens v1". Hardcoding the timestamp when a feature is designed or
+implemented makes it very unlikely that two different features could
+accidentally use the same context string.
 
-Like \textbf{keyed\_hash}, \textbf{derive\_key} requires no extra compressions.
-For context strings up to 64 bytes and derived key lengths up to 64 bytes,
-\textbf{derive\_key} is a single compression.
-
+Key derivation can encourage better security than personalization, by
+cryptographically isolating different components of an application from one
+another. This limits the damage if one component accidentally leaks its key.
 When an application needs to use a key in multiple algorithms or contexts, the
 best practice is to make a derived key for each use case. However, because the
 BLAKE3 modes are domain-separated, it is possible to use the same key with
