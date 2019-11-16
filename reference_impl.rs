@@ -4,12 +4,12 @@ const BLOCK_LEN: usize = 64;
 const CHUNK_LEN: usize = 2048;
 const ROUNDS: usize = 7;
 
-const CHUNK_START: u32 = 1 << 0;
-const CHUNK_END: u32 = 1 << 1;
-const PARENT: u32 = 1 << 2;
-const ROOT: u32 = 1 << 3;
-const KEYED_HASH: u32 = 1 << 4;
-const DERIVE_KEY: u32 = 1 << 5;
+const CHUNK_START: u8 = 1 << 0;
+const CHUNK_END: u8 = 1 << 1;
+const PARENT: u8 = 1 << 2;
+const ROOT: u8 = 1 << 3;
+const KEYED_HASH: u8 = 1 << 4;
+const DERIVE_KEY: u8 = 1 << 5;
 
 const IV: [u32; 8] = [
     0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C,
@@ -68,9 +68,9 @@ fn round(state: &mut [u32; 16], m: &[u32; 16], schedule: &[usize; 16]) {
 fn compress_inner(
     chaining_value: &[u32; 8],
     block_words: &[u32; 16],
-    block_len: usize,
     offset: u64,
-    flags: u32,
+    block_len: u8,
+    flags: u8,
 ) -> [u32; 16] {
     let mut state = [
         chaining_value[0],
@@ -88,7 +88,7 @@ fn compress_inner(
         IV[4] ^ (offset as u32),
         IV[5] ^ ((offset >> 32) as u32),
         IV[6] ^ block_len as u32,
-        IV[7] ^ flags,
+        IV[7] ^ flags as u32,
     ];
     for r in 0..ROUNDS {
         round(&mut state, &block_words, &MSG_SCHEDULE[r]);
@@ -100,12 +100,12 @@ fn compress_inner(
 fn compress(
     chaining_value: &mut [u32; 8],
     block_words: &[u32; 16],
-    block_len: usize,
     offset: u64,
-    flags: u32,
+    block_len: u8,
+    flags: u8,
 ) {
     let state =
-        compress_inner(chaining_value, block_words, block_len, offset, flags);
+        compress_inner(chaining_value, block_words, offset, block_len, flags);
     for i in 0..8 {
         chaining_value[i] = state[i] ^ state[i + 8];
     }
@@ -116,12 +116,12 @@ fn compress(
 fn compress_extended(
     chaining_value: &[u32; 8],
     block_words: &[u32; 16],
-    block_len: usize,
     offset: u64,
-    flags: u32,
+    block_len: u8,
+    flags: u8,
 ) -> [u32; 16] {
     let mut state =
-        compress_inner(chaining_value, block_words, block_len, offset, flags);
+        compress_inner(chaining_value, block_words, offset, block_len, flags);
     for i in 0..8 {
         state[i] ^= state[i + 8];
         state[i + 8] ^= chaining_value[i];
@@ -132,9 +132,9 @@ fn compress_extended(
 struct Output {
     input_chaining_value: [u32; 8],
     block_words: [u32; 16],
-    block_len: usize,
     offset: u64,
-    flags: u32,
+    block_len: u8,
+    flags: u8,
 }
 
 impl Output {
@@ -143,8 +143,8 @@ impl Output {
         compress(
             &mut cv,
             &self.block_words,
-            self.block_len,
             self.offset,
+            self.block_len,
             self.flags,
         );
         cv
@@ -157,8 +157,8 @@ impl Output {
             let words = compress_extended(
                 &self.input_chaining_value,
                 &self.block_words,
-                self.block_len,
                 offset,
+                self.block_len,
                 self.flags | ROOT,
             );
             bytes_from_words(&words, out_block);
@@ -170,26 +170,30 @@ impl Output {
 struct ChunkState {
     chaining_value: [u32; 8],
     offset: u64,
-    total_len: usize,
     block: [u8; BLOCK_LEN],
-    block_len: usize,
-    flags: u32,
+    block_len: u8,
+    blocks_compressed: u8,
+    flags: u8,
 }
 
 impl ChunkState {
-    fn new(key: &[u32; 8], offset: u64, flags: u32) -> Self {
+    fn new(key: &[u32; 8], offset: u64, flags: u8) -> Self {
         Self {
             chaining_value: *key,
             offset,
-            total_len: 0,
             block: [0; BLOCK_LEN],
             block_len: 0,
+            blocks_compressed: 0,
             flags,
         }
     }
 
-    fn start_flag(&self) -> u32 {
-        if self.total_len <= BLOCK_LEN {
+    fn len(&self) -> usize {
+        BLOCK_LEN * self.blocks_compressed as usize + self.block_len as usize
+    }
+
+    fn start_flag(&self) -> u8 {
+        if self.blocks_compressed == 0 {
             CHUNK_START
         } else {
             0
@@ -198,27 +202,27 @@ impl ChunkState {
 
     fn update(&mut self, mut input: &[u8]) {
         while !input.is_empty() {
-            if self.block_len == BLOCK_LEN {
+            if self.block_len as usize == BLOCK_LEN {
                 let mut block_words = [0; 16];
                 words_from_bytes(&self.block, &mut block_words);
                 let block_flags = self.start_flag() | self.flags;
                 compress(
                     &mut self.chaining_value,
                     &block_words,
-                    BLOCK_LEN,
                     self.offset,
+                    BLOCK_LEN as u8,
                     block_flags,
                 );
+                self.blocks_compressed += 1;
                 self.block = [0; BLOCK_LEN];
                 self.block_len = 0;
             }
 
-            let want = BLOCK_LEN - self.block_len;
+            let want = BLOCK_LEN - self.block_len as usize;
             let take = core::cmp::min(want, input.len());
             self.block[self.block_len as usize..][..take]
                 .copy_from_slice(&input[..take]);
-            self.block_len += take;
-            self.total_len += take;
+            self.block_len += take as u8;
             input = &input[take..];
         }
     }
@@ -241,7 +245,7 @@ fn hash_parent(
     left_child_cv: &[u32; 8],
     right_child_cv: &[u32; 8],
     key: &[u32; 8],
-    flags: u32,
+    flags: u8,
 ) -> Output {
     let mut block_words = [0; 16];
     block_words[..8].copy_from_slice(left_child_cv);
@@ -249,29 +253,29 @@ fn hash_parent(
     Output {
         input_chaining_value: *key,
         block_words,
-        block_len: BLOCK_LEN,
         // Note that the offset parameter is always zero for parent nodes.
         offset: 0,
+        block_len: BLOCK_LEN as u8,
         flags: PARENT | flags,
     }
 }
 
 /// An incremental hasher that can accept any number of writes.
 pub struct Hasher {
-    // Space for 53 subtree chaining values: 2^53 * CHUNK_LEN = 2^64
-    subtree_stack: [[u32; 8]; 53],
-    num_subtrees: usize,
     chunk_state: ChunkState,
     key: [u32; 8],
+    // Space for 53 subtree chaining values: 2^53 * CHUNK_LEN = 2^64
+    subtree_stack: [[u32; 8]; 53],
+    num_subtrees: u8,
 }
 
 impl Hasher {
-    fn new_internal(key: &[u32; 8], flags: u32) -> Self {
+    fn new_internal(key: &[u32; 8], flags: u8) -> Self {
         Self {
-            subtree_stack: [[0; 8]; 53],
-            num_subtrees: 0,
             chunk_state: ChunkState::new(key, 0, flags),
             key: *key,
+            subtree_stack: [[0; 8]; 53],
+            num_subtrees: 0,
         }
     }
 
@@ -318,7 +322,7 @@ impl Hasher {
         // number of chunks so far is the same as the number of subtrees that
         // should remain in the stack.
         let total_chunks = total_bytes / CHUNK_LEN as u64;
-        while self.num_subtrees > total_chunks.count_ones() as usize {
+        while self.num_subtrees as usize > total_chunks.count_ones() as usize {
             self.merge_two_subtrees();
         }
     }
@@ -326,7 +330,7 @@ impl Hasher {
     /// Add input to the hash state. This can be called any number of times.
     pub fn update(&mut self, mut input: &[u8]) {
         while !input.is_empty() {
-            if self.chunk_state.total_len == CHUNK_LEN {
+            if self.chunk_state.len() == CHUNK_LEN {
                 let chunk_cv = self.chunk_state.output().chaining_value();
                 let new_chunk_offset =
                     self.chunk_state.offset + CHUNK_LEN as u64;
@@ -338,7 +342,7 @@ impl Hasher {
                 );
             }
 
-            let want = CHUNK_LEN - self.chunk_state.total_len;
+            let want = CHUNK_LEN - self.chunk_state.len();
             let take = core::cmp::min(want, input.len());
             self.chunk_state.update(&input[..take]);
             input = &input[take..];
@@ -356,7 +360,7 @@ impl Hasher {
         // Otherwise, finalize the current chunk, and then merge all the
         // subtrees along the right edge of the tree.
         let mut right_child = self.chunk_state.output().chaining_value();
-        let mut subtrees_remaining = self.num_subtrees;
+        let mut subtrees_remaining = self.num_subtrees as usize;
         loop {
             let left_child = &self.subtree_stack[subtrees_remaining - 1];
             let output = hash_parent(
