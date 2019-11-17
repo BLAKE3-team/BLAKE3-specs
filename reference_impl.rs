@@ -26,20 +26,19 @@ const MSG_SCHEDULE: [[usize; 16]; ROUNDS] = [
     [12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11],
 ];
 
-// Note that this conversion is little-endian.
-fn words_from_bytes(bytes: &[u8], words: &mut [u32]) {
+fn words_from_litte_endian_bytes(bytes: &[u8], words: &mut [u32]) {
     for (b, w) in bytes.chunks_exact(4).zip(words.iter_mut()) {
         *w = u32::from_le_bytes(core::convert::TryInto::try_into(b).unwrap());
     }
 }
 
-// Note that this conversion is little-endian.
-fn bytes_from_words(words: &[u32], bytes: &mut [u8]) {
+fn little_endian_bytes_from_words(words: &[u32], bytes: &mut [u8]) {
     for (w, b) in words.iter().zip(bytes.chunks_exact_mut(4)) {
         b.copy_from_slice(&w.to_le_bytes());
     }
 }
 
+// The mixing function, G, which mixes either a column or a diagonal.
 fn g(state: &mut [u32; 16], indices: [usize; 4], mx: u32, my: u32) {
     let [a, b, c, d] = indices;
     state[a] = state[a].wrapping_add(state[b]).wrapping_add(mx);
@@ -96,7 +95,7 @@ fn compress_inner(
     state
 }
 
-// The standard compression function updates a chaining value in place.
+// The standard compression function updates an 8-word chaining value in place.
 fn compress(
     chaining_value: &mut [u32; 8],
     block_words: &[u32; 16],
@@ -111,8 +110,9 @@ fn compress(
     }
 }
 
-// The extended compression function returns a new 16-word extended chaining
-// value. Note that the first 8 words are the same as compress().
+// The extended compression function returns a new 16-word extended output.
+// Note that the first 8 words of output are the same as with compress().
+// Implementations that do not support extendable output can omit this.
 fn compress_extended(
     chaining_value: &[u32; 8],
     block_words: &[u32; 16],
@@ -129,6 +129,8 @@ fn compress_extended(
     state
 }
 
+// The output of a chunk or parent node, which could be an 8-word chaining
+// value or any number of root output bytes.
 struct Output {
     input_chaining_value: [u32; 8],
     block_words: [u32; 16],
@@ -153,7 +155,6 @@ impl Output {
     fn root_output(&self, out_slice: &mut [u8]) {
         let mut offset = self.offset;
         for out_block in out_slice.chunks_mut(2 * OUT_LEN) {
-            // For outputs 32 bytes or less, compress() could also work here.
             let words = compress_extended(
                 &self.input_chaining_value,
                 &self.block_words,
@@ -161,7 +162,7 @@ impl Output {
                 self.block_len,
                 self.flags | ROOT,
             );
-            bytes_from_words(&words, out_block);
+            little_endian_bytes_from_words(&words, out_block);
             offset += 2 * OUT_LEN as u64;
         }
     }
@@ -204,7 +205,7 @@ impl ChunkState {
         while !input.is_empty() {
             if self.block_len as usize == BLOCK_LEN {
                 let mut block_words = [0; 16];
-                words_from_bytes(&self.block, &mut block_words);
+                words_from_litte_endian_bytes(&self.block, &mut block_words);
                 let block_flags = self.start_flag() | self.flags;
                 compress(
                     &mut self.chaining_value,
@@ -229,7 +230,7 @@ impl ChunkState {
 
     fn output(&self) -> Output {
         let mut block_words = [0; 16];
-        words_from_bytes(&self.block, &mut block_words);
+        words_from_litte_endian_bytes(&self.block, &mut block_words);
         let block_flags = self.flags | self.start_flag() | CHUNK_END;
         Output {
             input_chaining_value: self.chaining_value,
@@ -241,7 +242,7 @@ impl ChunkState {
     }
 }
 
-fn hash_parent(
+fn parent_output(
     left_child_cv: &[u32; 8],
     right_child_cv: &[u32; 8],
     key: &[u32; 8],
@@ -253,9 +254,8 @@ fn hash_parent(
     Output {
         input_chaining_value: *key,
         block_words,
-        // Note that the offset parameter is always zero for parent nodes.
-        offset: 0,
-        block_len: BLOCK_LEN as u8,
+        offset: 0,                  // Always 0 for parent nodes.
+        block_len: BLOCK_LEN as u8, // Always BLOCK_LEN (64) for parent nodes.
         flags: PARENT | flags,
     }
 }
@@ -264,9 +264,8 @@ fn hash_parent(
 pub struct Hasher {
     chunk_state: ChunkState,
     key: [u32; 8],
-    // Space for 53 subtree chaining values: 2^53 * CHUNK_LEN = 2^64
-    subtree_stack: [[u32; 8]; 53],
-    num_subtrees: u8,
+    subtree_stack: [[u32; 8]; 53], // Space for 53 subtree chaining values:
+    num_subtrees: u8,              // 2^53 * CHUNK_LEN = 2^64
 }
 
 impl Hasher {
@@ -279,22 +278,22 @@ impl Hasher {
         }
     }
 
-    /// Construct a new Hasher for the default, unkeyed hash function.
+    /// Construct a new `Hasher` for the default **hash** mode.
     pub fn new() -> Self {
         Self::new_internal(&IV, 0)
     }
 
-    /// Construct a new Hasher for the keyed hash function.
+    /// Construct a new `Hasher` for the **keyed_hash** mode.
     pub fn new_keyed(key: &[u8; KEY_LEN]) -> Self {
         let mut key_words = [0; 8];
-        words_from_bytes(key, &mut key_words);
+        words_from_litte_endian_bytes(key, &mut key_words);
         Self::new_internal(&key_words, KEYED_HASH)
     }
 
-    /// Construct a new Hasher for the key derivation function.
+    /// Construct a new `Hasher` for the **derive_key** mode.
     pub fn new_derive_key(key: &[u8; KEY_LEN]) -> Self {
         let mut key_words = [0; 8];
-        words_from_bytes(key, &mut key_words);
+        words_from_litte_endian_bytes(key, &mut key_words);
         Self::new_internal(&key_words, DERIVE_KEY)
     }
 
@@ -303,7 +302,7 @@ impl Hasher {
     fn merge_two_subtrees(&mut self) {
         let left_child = &self.subtree_stack[self.num_subtrees as usize - 2];
         let right_child = &self.subtree_stack[self.num_subtrees as usize - 1];
-        let parent_hash = hash_parent(
+        let parent_hash = parent_output(
             left_child,
             right_child,
             &self.key,
@@ -349,6 +348,13 @@ impl Hasher {
         }
     }
 
+    /// Finalize the hash and return the default 32-byte output.
+    pub fn finalize(&self) -> [u8; OUT_LEN] {
+        let mut bytes = [0; OUT_LEN];
+        self.finalize_extended(&mut bytes);
+        bytes
+    }
+
     /// Finalize the hash and write any number of output bytes.
     pub fn finalize_extended(&self, out_slice: &mut [u8]) {
         // If the subtree stack is empty, then the current chunk is the root.
@@ -363,7 +369,7 @@ impl Hasher {
         let mut subtrees_remaining = self.num_subtrees as usize;
         loop {
             let left_child = &self.subtree_stack[subtrees_remaining - 1];
-            let output = hash_parent(
+            let output = parent_output(
                 left_child,
                 &right_child,
                 &self.key,
@@ -376,12 +382,5 @@ impl Hasher {
             right_child = output.chaining_value();
             subtrees_remaining -= 1;
         }
-    }
-
-    /// Finalize the hash and return a 32-byte output.
-    pub fn finalize(&self) -> [u8; OUT_LEN] {
-        let mut bytes = [0; OUT_LEN];
-        self.finalize_extended(&mut bytes);
-        bytes
     }
 }
