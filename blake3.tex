@@ -197,12 +197,14 @@ empty, unless the entire input is empty. If there is only one chunk, that chunk
 is the root node and only node of the tree. Otherwise, the chunks are assembled
 with parent nodes, each parent node having exactly two children. The
 structure of the tree is determined by two rules:
-\begin{itemize}
-    \item Each left subtree is a complete binary tree, with all its chunks at
-        the same depth, and a number of chunks that is a power of 2.
-    \item Each left subtree contains a number of chunks greater than or equal
-        to the number of chunks in its sibling right subtree.
-\end{itemize}
+\begin{enumerate}
+    \item Left subtrees are full. Each left subtree is a complete binary tree,
+        with all its chunks at the same depth, and a number of chunks that is a
+        power of 2.
+    \item Left subtrees are big. Each left subtree contains a number of chunks
+        greater than or equal to the number of chunks in its sibling right
+        subtree.
+\end{enumerate}
 For example, trees from 1 to 4 chunks have the structure shown in
 Figure~\ref{fig:fourchunks}.
 
@@ -315,12 +317,12 @@ defined as:
 The domain separation flags used for $d$ are:
 \begin{center}
 \begin{tabular}{l l}
-    \text{CHUNK\_START} & 1 \\
-    \text{CHUNK\_END}   & 2 \\
-    \text{PARENT}       & 4 \\
-    \text{ROOT}         & 8 \\
-    \text{KEYED\_HASH}  & 16 \\
-    \text{DERIVE\_KEY}  & 32
+    \text{\texttt{\texttt{CHUNK}\_START}} & 1 \\
+    \text{\texttt{\texttt{CHUNK\_END}}}   & 2 \\
+    \text{\texttt{\texttt{PARENT}}}       & 4 \\
+    \text{\texttt{\texttt{ROOT}}}         & 8 \\
+    \text{\texttt{\texttt{KEYED\_HASH}}}  & 16 \\
+    \text{\texttt{\texttt{DERIVE\_KEY}}}  & 32
 \end{tabular}
 \end{center}
 The value of $d$ is the bitwise-or of all the flags set for a given
@@ -335,9 +337,9 @@ set for every call to the compression function. In the \textbf{hash} mode,
 $k_{0} \ldots k_{7}$ are the constants $\IV_0 \ldots \IV_7$, and no additional
 flags are set. In the \textbf{keyed\_hash} mode, $k_{0} \ldots k_{7}$ are
 parsed in little-endian order from the 32-byte key given by the caller, and the
-KEYED\_HASH flag is set for every compression. In the \textbf{derive\_key}
-mode, the key is again given by the caller, and the DERIVE\_KEY flag is set for
-every compression.
+\texttt{KEYED\_HASH} flag is set for every compression. In the
+\textbf{derive\_key} mode, the key is again given by the caller, and the
+\texttt{DERIVE\_KEY} flag is set for every compression.
 
 \subsection{Chunk Chaining Values}\label{sec:chunk}
 
@@ -354,11 +356,12 @@ the starting byte index of its chunk, 0 for all blocks in the first chunk, 2048
 for all blocks in the second chunk, and so on. The block length $b$ is the
 number of input bytes in each block, 64 for all blocks except the last block of
 the last chunk, which may be short. The first block of each chunk sets the
-CHUNK\_START flag, and the last block of each chunk sets the CHUNK\_END flag.
-If a chunk contains only one block, that block sets both CHUNK\_START and
-CHUNK\_END. If a chunk is the root of its tree, the last block of that chunk
-also sets the ROOT flag. The output of the compression function for the last
-block in a chunk is the chaining value of that chunk.
+\texttt{CHUNK\_START} flag, and the last block of each chunk sets the
+\texttt{CHUNK\_END} flag. If a chunk contains only one block, that block sets
+both \texttt{CHUNK\_START} and \texttt{CHUNK\_END}. If a chunk is the root of
+its tree, the last block of that chunk also sets the \texttt{ROOT} flag. The
+output of the compression function for the last block in a chunk is the
+chaining value of that chunk.
 
 \subsection{Parent Node Chaining Values}\label{sec:parent}
 
@@ -368,22 +371,23 @@ to the compression function. The input chaining value $h_{0} \ldots h_{7}$ is
 the key words $k_{0} \ldots k_{7}$. The message words $m_{0} \ldots m_{15}$ are
 the concatenated chaining values of the two children, first the left then the
 right. The offset $t$ for parent nodes is always 0. The number of bytes $b$ for
-parent nodes is always 64. Parent nodes set the PARENT flag. If a parent node
-is the root of the tree, it also sets the ROOT flag. The the output of the
-compression function is the chaining value of the parent node.
+parent nodes is always 64. Parent nodes set the \texttt{PARENT} flag. If a
+parent node is the root of the tree, it also sets the \texttt{ROOT} flag. The
+the output of the compression function is the chaining value of the parent
+node.
 
 \subsection{Extendable Output}\label{sec:extendable}
 
 The default output of BLAKE3 is 32 bytes, but BLAKE3 can also produce extended
 output of any byte length $\ell < 2^{64}$. This is done by repeating the root
 compression --- that is, the very last call to the compression function, which
-sets the ROOT flag --- with incrementing values of the offset $t$. The results
-of these repeated root compressions are then concatenated into an extended
-output.
+sets the \texttt{ROOT} flag --- with incrementing values of the offset $t$. The
+results of these repeated root compressions are then concatenated into an
+extended output.
 
 When building an extended output, BLAKE3 uses an extended version of the
-compression function, which differs from the regular compression function in
-its final step, returning 16 words instead of 8:
+compression function that differs from the regular compression function in its
+final step, returning 16 words instead of 8:
 \begin{align*}
     h_{0}'  \ & \leftarrow \ v_{0} \oplus  v_{8} &
     h_{8}'  \ & \leftarrow \ v_{8} \oplus  h_{0} \\
@@ -402,7 +406,7 @@ its final step, returning 16 words instead of 8:
     h_{7}'  \ & \leftarrow \ v_{7} \oplus  v_{15} &
     h_{15}' \ & \leftarrow \ v_{15} \oplus  h_{7}
 \end{align*}
-Note that the first 8 words of an extended compression output are the same as
+Note that the first 8 words of the extended compression output are the same as
 the regular compression output. The last 8 words are the input chaining value
 fed forward into the last 8 words of the internal state. Each 16-word output is
 encoded as 64 bytes in little-endian order.
@@ -452,34 +456,35 @@ diagram.
 Like BLAKE2, BLAKE3 has explicit support for a keyed mode,
 \textbf{keyed\_hash}. This removes the need for a separate construction like
 HMAC. The \textbf{keyed\_hash} mode is also more efficient than keyed BLAKE2 or
-HMAC for short messages. BLAKE2 requires an extra compression for the key, and
-HMAC requires three extra compressions. The \textbf{keyed\_hash} mode in BLAKE3
-does not require any extra compressions.
+HMAC for short messages. BLAKE2 requires an extra compression for the key
+block, and HMAC requires three extra compressions. The \textbf{keyed\_hash}
+mode in BLAKE3 does not require any extra compressions.
 
 \subsection{Key Derivation}\label{sec:mac}
 
 BLAKE3 has explicit support for a key derivation mode, \textbf{derive\_key}.
-This mode is intended to replace the BLAKE2 personalization parameter for its
-most common use cases. Like \textbf{keyed\_hash}, \textbf{derive\_key} does not
+The input bytes should be a hardcoded, globally unique context string. A good
+default format for such strings is "[application] [date] [purpose]", e.g.
+"example.com 2019-12-25 16:18:03 session tokens v1". If the input key material
+is not already a 256-bit key, it should first be converted into 256 bits using
+the default output of the BLAKE3 \textbf{hash} mode.
+
+The \textbf{derive\_key} mode is intended to replace the BLAKE2 personalization
+parameter for its most common use cases. Like \textbf{keyed\_hash}, it does not
 require any extra compressions. For context strings up to 64 bytes and derived
 key lengths up to 64 bytes, \textbf{derive\_key} is a single compression.
 
-The input to \textbf{derive\_key} should be a hardcoded, globally unique,
-application-specific context string. A good default format for such strings is
-"[application] [timestamp] [purpose]", e.g. "example.com 2019-12-25 16:18:03
-session tokens v1". Hardcoding the timestamp when a feature is designed or
-implemented makes it very unlikely that two different features could
-accidentally use the same context string.
-
 Key derivation can encourage better security than personalization, by
 cryptographically isolating different components of an application from one
-another. This limits the damage if one component accidentally leaks its key.
-When an application needs to use a key in multiple algorithms or contexts, the
-best practice is to make a derived key for each use case. However, because the
-BLAKE3 modes are domain-separated, it is possible to use the same key with
-\textbf{keyed\_hash} and also with \textbf{derive\_key}. That can be necessary
-when an application adds a new use case for an existing key, if the original
-use case did not include a key derivation step.
+another. This limits the damage that one component can cause by accidentally
+leaking its key. When an application needs to use one secret in multiple
+algorithms or contexts, the best practice is to derive a separate key for each
+use case, such that the original secret is only used with the key derivation
+function. However, because the BLAKE3 modes are domain-separated, it is also
+possible to use the same key with \textbf{keyed\_hash} and with
+\textbf{derive\_key}. This can be necessary for backwards compatibility when an
+application adds a new use case for an existing key, if the original use case
+did not include a context-specific key derivation step.
 
 \subsection{Streaming Verification}\label{sec:streamingverification}
 
@@ -494,6 +499,8 @@ Giant disk images.
 \nocite{*}
 \bibliographystyle{plainurl}
 \bibliography{blake3}
+
+[These references are placeholders. TODO.]
 
 \begin{appendices}
 
