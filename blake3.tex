@@ -24,10 +24,19 @@
 
 \usepackage{verbatim,footmisc}
 \usepackage{array}
-\usepackage{euler}
-\usepackage{helvet}
+
+%\usepackage{euler}
+%\usepackage{helvet}
+%\renewcommand{\familydefault}{\sfdefault}
+%\fontfamily{phv}\selectfont
+
 \renewcommand{\familydefault}{\sfdefault}
-\fontfamily{phv}\selectfont
+\usepackage[scaled=1]{helvet}
+\usepackage[helvet]{sfmath}
+\everymath={\sf}
+
+\usepackage[T1]{fontenc} % improves underscore rendering
+
 \usepackage{multirow}
 \usepackage{booktabs}
 \usepackage{datetime}
@@ -41,9 +50,8 @@
 \usepackage{booktabs}
 \usepackage{listings}
 \usepackage{tikz}
-\usepackage[T1]{fontenc} % improves underscore rendering
 \usepackage[shortcuts]{extdash} % unbreakable dashes, e.g. SHA\=/2
-\usepackage[outputdir=build]{minted} % syntax highlighting using Pygments
+% \usepackage[outputdir=build]{minted} % syntax highlighting using Pygments
 \usepackage[title]{appendix} % add "Appendix" to each appendix section title
 \usetikzlibrary
 {
@@ -105,16 +113,16 @@ AUTHORS
   \begin{minipage}{0.92\linewidth}
 
       \textbf{Abstract.} We present the cryptographic hash function BLAKE3, an
-      improved version of BLAKE2 and of its predecessor, the SHA\=/3 finalist
-      BLAKE. BLAKE3 supports high degrees of parallelism, using an internal
-      tree structure that scales up to any number of SIMD lanes and CPU cores.
-      On Intel Kaby Lake, peak single-threaded throughput is 3x that of
-      BLAKE2b, 4x that of SHA\=/2, and 8x that of SHA\=/3, and it can scale
-      further using multiple threads. At the same time, BLAKE3 is efficient on
+      improved derivative of BLAKE2 and of its predecessor, the SHA\=/3 finalist
+      BLAKE. BLAKE3 supports an unbounded degree of parallelism, using an internal
+      binary tree structure that scales up to any number of SIMD lanes and CPU cores.
+      On Intel Kaby Lake, peak single-threaded throughput is $3\times$ that of
+      BLAKE2b, $4\times$ that of SHA\=/2, and $8\times$ that of SHA\=/3, and it can scale
+      further using multiple threads. On the other end, BLAKE3 is also efficient on
       smaller architectures and microcontrollers. Throughput on ARM Cortex-M0
-      is 30\% higher than BLAKE2s or SHA\=/256, and 3x that of BLAKE2b,
+      is $1.3\times$ higher than BLAKE2s or SHA\=/256, and $3\times$ that of BLAKE2b,
       SHA\=/512, or SHA\=/3. Unlike BLAKE2 and SHA\=/2, which have incompatible
-      variants optimized for different platforms, BLAKE3 is a single hash
+      variants better suited for different platforms, BLAKE3 is a single hash
       function, designed to be consistently fast in software across a wide
       variety of platforms and use cases.
 
@@ -125,7 +133,8 @@ AUTHORS
 
 \section{Introduction}\label{sec:intro}
 
-Since its announcement in 2012, BLAKE2 has seen widespread adoption, in large
+Since its announcement in 2012, BLAKE2~\cite{DBLP:conf/acns/AumassonNWW13} has 
+seen widespread adoption, in large
 part because of its strong performance in software. BLAKE2b and BLAKE2s are
 included in OpenSSL and in the Python and Go standard libraries. BLAKE2b is
 also included as the \texttt{b2sum} utility in GNU Coreutils, as the
@@ -464,8 +473,8 @@ mode in BLAKE3 does not require any extra compressions.
 
 BLAKE3 has explicit support for a key derivation mode, \textbf{derive\_key}.
 The input bytes should be a hardcoded, globally unique context string. A good
-default format for such strings is "[application] [date] [purpose]", e.g.
-"example.com 2019-12-25 16:18:03 session tokens v1". If the input key material
+default format for such strings is \texttt{"[application] [date] [purpose]"}, e.g.,
+\texttt{"example.com 2019-12-25 16:18:03 session tokens v1"}. If the input key material
 is not already a 256-bit key, it should first be converted into 256 bits using
 the default output of the BLAKE3 \textbf{hash} mode.
 
@@ -569,7 +578,7 @@ Giant disk images.
 
 \section{Rust Reference Implementation}\label{sec:referenceimpl}
 
-\inputminted{rust}{reference_impl.rs}
+% \inputminted[fontsize=\footnotesize]{rust}{reference_impl.rs}
 
 \end{appendices}
 
