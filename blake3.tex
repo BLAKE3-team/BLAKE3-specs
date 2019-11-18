@@ -438,18 +438,18 @@ It's safe :)
 
 It's big :(
 
-\section{Implementation}\label{sec:memory}
+\section{Implementation}\label{sec:implementation}
 
-\subsection{SIMD}\label{sec:mac}
+\subsection{SIMD}\label{sec:simd}
 
 How to do efficient parallel chunk hashing.
 
-\subsection{Incremental Hashing}\label{sec:mac}
+\subsection{Incremental Hashing}\label{sec:incremental}
 
 How to merge subtrees, using that trick with counting 1 bits. Include a pretty
 diagram.
 
-\section{Applications}\label{sec:memory}
+\section{Applications}\label{sec:applications}
 
 \subsection{Message Authentication Codes}\label{sec:mac}
 
@@ -460,7 +460,7 @@ HMAC for short messages. BLAKE2 requires an extra compression for the key
 block, and HMAC requires three extra compressions. The \textbf{keyed\_hash}
 mode in BLAKE3 does not require any extra compressions.
 
-\subsection{Key Derivation}\label{sec:mac}
+\subsection{Key Derivation}\label{sec:kdf}
 
 BLAKE3 has explicit support for a key derivation mode, \textbf{derive\_key}.
 The input bytes should be a hardcoded, globally unique context string. A good
