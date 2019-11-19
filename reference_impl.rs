@@ -297,8 +297,8 @@ impl Hasher {
         Self::new_internal(&key_words, DERIVE_KEY)
     }
 
-    // Take two subtree hashes off the end of the stack, compress them into a
-    // parent hash, and put that hash back on the stack.
+    // Pop the top two subtree chaining values off the stack, compress them
+    // into a parent CV, and put that new CV on top of the stack.
     fn merge_two_subtrees(&mut self) {
         let left_child = &self.subtree_stack[self.num_subtrees as usize - 2];
         let right_child = &self.subtree_stack[self.num_subtrees as usize - 1];
@@ -316,10 +316,10 @@ impl Hasher {
     fn push_chunk_chaining_value(&mut self, cv: &[u32; 8], total_bytes: u64) {
         self.subtree_stack[self.num_subtrees as usize] = *cv;
         self.num_subtrees += 1;
-        // After pushing the new chunk hash onto the subtree stack, hash as
-        // many parent nodes as we can. The number of 1 bits in the total
-        // number of chunks so far is the same as the number of subtrees that
-        // should remain in the stack.
+        // After pushing the new chunk chaining value onto the stack, assemble
+        // and compress as many parent nodes as we can. The number of 1 bits in
+        // the total number of chunks so far is the same as the number of CVs
+        // that should remain in the stack after this is done.
         let total_chunks = total_bytes / CHUNK_LEN as u64;
         while self.num_subtrees as usize > total_chunks.count_ones() as usize {
             self.merge_two_subtrees();
