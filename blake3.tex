@@ -120,7 +120,7 @@ AUTHORS
       BLAKE2b, $4\times$ that of SHA\=/2, and $8\times$ that of SHA\=/3, and it can scale
       further using multiple threads. On the other end, BLAKE3 is also efficient on
       smaller architectures and microcontrollers. Throughput on ARM Cortex-M0
-      is $1.3\times$ higher than BLAKE2s or SHA\=/256, and $3\times$ that of BLAKE2b,
+      is $1.3\times$ that of BLAKE2s or SHA\=/256, and $3\times$ that of BLAKE2b,
       SHA\=/512, or SHA\=/3. Unlike BLAKE2 and SHA\=/2, which have incompatible
       variants better suited for different platforms, BLAKE3 is a single hash
       function, designed to be consistently fast in software across a wide
@@ -264,10 +264,10 @@ Figure~\ref{fig:fourchunks}.
 \label{fig:fourchunks}
 \end{figure}
 
-The compression function is used to derive an 8-word chaining value from each
-chunk and parent node. The chaining value of the root node, encoded as 32 bytes
-in little-endian order, is the BLAKE3 hash of the input. BLAKE3 supports input
-of any byte length $0 \leq \ell < 2^{64}$.
+The compression function is used to derive a chaining value from each chunk and
+parent node. The chaining value of the root node, encoded as 32 bytes in
+little-endian order, is the default-length BLAKE3 hash of the input. BLAKE3
+supports input of any byte length $0 \leq \ell < 2^{64}$.
 
 \subsection{Compression Function}\label{sec:compression}
 
@@ -421,12 +421,12 @@ fed forward into the last 8 words of the internal state. Each 16-word output is
 encoded as 64 bytes in little-endian order.
 
 Observe that for the default output, the root compression always uses offset $t
-= 0$. That is, it is either the last block of the only chunk, which has a chunk
-offset of 0, or it is a parent node. For extended output, the first root
-compression sets $t = 0$ as usual but uses the extended compression function.
-Then as long as more bytes are needed, $t$ is incremented by 64, and the root
-compression is repeated on the same inputs. If the target output length is not
-a multiple of 64, the final compression output is truncated.
+= 0$. That is either because it is the last block of the only chunk, which has
+a chunk offset of $0$, or because it is a parent node. For extended output, the
+first root compression sets $t = 0$ as usual but uses the extended compression
+function. Then as long as more bytes are needed, $t$ is incremented by 64, and
+the root compression is repeated on the same inputs. If the target output
+length is not a multiple of 64, the final compression output is truncated.
 
 Because the repeated root compressions differ only in the value of $t$, the
 implementation can execute any number of them in parallel. The caller can also
