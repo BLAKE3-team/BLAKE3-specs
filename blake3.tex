@@ -451,35 +451,35 @@ It's big :(
 
 \subsection{SIMD}\label{sec:simd}
 
-There are two different approaches to using SIMD in a BLAKE3 implementation,
-and both are important for high performance. The first approach is to use
-128-bit vectors to represent the 4-word rows of the state matrix. The second
-approach is to use vectors of any size to represent words in several different
+There are two approaches to using SIMD in a BLAKE3 implementation, and both are
+important for high performance at different input lengths. The first approach
+is to use 128-bit vectors to represent the 4-word rows of the state matrix. The
+second approach is to use vectors of any size to represent words in multiple
 states, which are compressed in parallel.
 
 The first approach is similar to how SIMD is used in BLAKE2b or BLAKE2s, and it
-is applicable to inputs of any length. The state $v_0 \ldots v_{15}$ is
-arranged into four 128-bit vectors. The first vector contains the state words
-$v_0 \ldots v_3$, the second vector contains the state words $v_4 \ldots v_7$,
-and so on. Implementing the G function (Appendix~\ref{sec:roundfn}) with vector
+is applicable to inputs of any length, particularly short inputs where the
+second approach does not apply. The state $v_0 \ldots v_{15}$ is arranged into
+four 128-bit vectors. The first vector contains the state words $v_0 \ldots
+v_3$, the second vector contains the state words $v_4 \ldots v_7$, and so on.
+Implementing the G function (Appendix~\ref{sec:roundfn}) with vector
 instructions thus mixes all four columns of the state matrix in parallel. A
 diagonalization step then rotates the words within each row so that each
 diagonal now lies along a column, and the vectorized G function is repeated to
-mix diagonals. Finally the matrix is undiagonalized, to prepare for the column
+mix diagonals. Finally the state is undiagonalized, to prepare for the column
 step of the following round.
 
 The second approach is similar to how SIMD is used in BLAKE2bp or BLAKE2sp. In
 this approach, multiple chunks are compressed in parallel, and each vector
 contains one word from the state matrix of each chunk. That is, the first
 vector contains the $v_0$ word from each state, the second vector contains the
-$v_1$ word from each state, and so on, 16 vectors in total. The number of
-chunks hashed determines the width of the vector, so for example 4 chunks would
-occupy a 128-bit vector. Here the G function operates on one column or diagonal
-at a time, but across all of the states. When enough input is available, this
-approach is much more efficient than the first approach, because the
-diagonalization and undiagonalization steps are not required. Given enough
-input, this approach also scales to wider vector instructions like AVX2 and
-AVX-512.
+$v_1$ word from each state, and so on, using 16 vectors in total. The width of
+the vectors determines the number of chunks, so for example 128-bit vectors
+compress 4 chunks in parallel, and 256-bit vectors compress 8 chunks in
+parallel. Here the G function operates on one column or diagonal at a time, but
+across all of the states, and no diagonalization step is required. When enough
+input is available, this approach is much more efficient than the first
+approach. It also scales to wider instruction sets like AVX2 and AVX-512.
 
 \subsection{Incremental Hashing}\label{sec:incremental}
 
