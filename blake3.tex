@@ -272,7 +272,7 @@ supports input of any byte length $0 \leq \ell < 2^{64}$.
 \subsection{Compression Function}\label{sec:compression}
 
 The compression function takes an 8-word chaining value and a 16-word message
-block, and it returns a new chaining value. A word is 32 bits. The inputs to
+block, and it returns a new 16-word value. A word is 32 bits. The inputs to
 the compression function are:
 
 \begin{itemize}
@@ -285,9 +285,7 @@ the compression function are:
 \end{itemize}
 
 The compression function initializes its 16-word internal state $v_{0} \ldots
-v_{15}$ as follows. The $\IV_{0} \ldots \IV_{7}$ constants are the same as in
-BLAKE2s, and they are reproduced in appendix~\ref{sec:ivconstants}.
-$\oplus$~denotes bitwise exclusive-or:
+v_{15}$ as follows: 
 
 \begin{equation*}
 \begin{pmatrix}
@@ -301,54 +299,82 @@ v_{12} & v_{13} & v_{14} & v_{15} \\
 h_{0} & h_{1} & h_{2} & h_{3} \\
 h_{4} & h_{5} & h_{6} & h_{7} \\
 \IV_{0} & \IV_{1} & \IV_{2} & \IV_{3} \\
-t_{0} \oplus \IV_{4} & t_{1} \oplus \IV_{5} & b \oplus \IV_{6} & d \oplus \IV_{7}
+t_{0} & t_{1} & b & d 
 \end{pmatrix}
 \end{equation*}
 
-The compression function applies the round function to the state and the
-message block 7 times, each time with a different message schedule. The round
-function and the message schedule for each round are the same as in BLAKE2s.
-They are reproduced in appendix~\ref{sec:roundfn}.
+The $\IV_{0} \ldots \IV_{7}$ constants are the same as in
+BLAKE2s, and they are reproduced in Appendix~\ref{sec:ivconstants}.
 
-After 7 rounds of compression, the new chaining value $h_{0}' \ldots h_{7}'$ is
+The compression function applies a 7-round keyed permutation $v' = E(m, v)$ to the state $v_0, \dots, v_{15}$, keyed by the message $m_0, \dots, m_{15}$. This keyed permutation here is identical to the one underlying BLAKE2s, and is reproduced in Appendix~\ref{sec:roundfn}.
+
+The output of the compression function $h_{0}' \ldots h_{15}'$ is
 defined as:
 \begin{align*}
-    h_{0}' \ & \leftarrow \ v_{0} \oplus  v_{8} \\
-    h_{1}' \ & \leftarrow \ v_{1} \oplus  v_{9} \\
-    h_{2}' \ & \leftarrow \ v_{2} \oplus  v_{10} \\
-    h_{3}' \ & \leftarrow \ v_{3} \oplus  v_{11} \\
-    h_{4}' \ & \leftarrow \ v_{4} \oplus  v_{12} \\
-    h_{5}' \ & \leftarrow \ v_{5} \oplus  v_{13} \\
-    h_{6}' \ & \leftarrow \ v_{6} \oplus  v_{14} \\
-    h_{7}' \ & \leftarrow \ v_{7} \oplus  v_{15}
+h_{0}'  \ & \leftarrow \ v'_{0} \oplus  v'_{8} &
+h_{8}'  \ & \leftarrow \ v'_{8} \oplus  h_{0} \\
+h_{1}'  \ & \leftarrow \ v'_{1} \oplus  v'_{9} &
+h_{9}'  \ & \leftarrow \ v'_{9} \oplus  h_{1} \\
+h_{2}'  \ & \leftarrow \ v'_{2} \oplus  v'_{10} &
+h_{10}' \ & \leftarrow \ v'_{10} \oplus  h_{2} \\
+h_{3}'  \ & \leftarrow \ v'_{3} \oplus  v'_{11} &
+h_{11}' \ & \leftarrow \ v'_{11} \oplus  h_{3} \\
+h_{4}'  \ & \leftarrow \ v'_{4} \oplus  v'_{12} &
+h_{12}' \ & \leftarrow \ v'_{12} \oplus  h_{4} \\
+h_{5}'  \ & \leftarrow \ v'_{5} \oplus  v'_{13} &
+h_{13}' \ & \leftarrow \ v'_{13} \oplus  h_{5} \\
+h_{6}'  \ & \leftarrow \ v'_{6} \oplus  v'_{14} &
+h_{14}' \ & \leftarrow \ v'_{14} \oplus  h_{6} \\
+h_{7}'  \ & \leftarrow \ v'_{7} \oplus  v'_{15} &
+h_{15}' \ & \leftarrow \ v'_{15} \oplus  h_{7}\,.
 \end{align*}
+If we define $v_l$ (resp. $v'_l$) and $v_h$ (resp. $v'_h$) as the first and last 8-words of the input (resp. output) of $E(m, v)$ as elements of $\mathbb{F}_2^{256}}$, the compression function may be represented as 
+\[
+  \begin{pmatrix}
+    1 & 1 \\
+    0 & 1
+  \end{pmatrix}\cdot%
+  \begin{pmatrix}
+  v'_l \\ v'_h
+  \end{pmatrix} + 
+  \begin{pmatrix}
+   0 \\ v_l
+  \end{pmatrix}\,.
+\]
+A common variant of the compression function, used internally to produce 256-bit chaining values, simply truncates the output to its first 256 bits. We defer to analysis of the compression function to \S\ref{sec:security}.
 
-The domain separation flags used for $d$ are:
-\begin{center}
-\begin{tabular}{l l}
-    \text{\texttt{\texttt{CHUNK}\_START}} & 1 \\
-    \text{\texttt{\texttt{CHUNK\_END}}}   & 2 \\
-    \text{\texttt{\texttt{PARENT}}}       & 4 \\
-    \text{\texttt{\texttt{ROOT}}}         & 8 \\
-    \text{\texttt{\texttt{KEYED\_HASH}}}  & 16 \\
-    \text{\texttt{\texttt{DERIVE\_KEY}}}  & 32
-\end{tabular}
-\end{center}
-The value of $d$ is the bitwise-or of all the flags set for a given
-compression. Their usage is described below.
+%\subsubsection{Flags}
+The compression function input $d$ is a bitfield, with each individual flag consisting of a power of 2 value. The value of $d$ is the sum of all the flags defined for a given
+compression. Their names and values are given in Table~\ref{tab:flags}.
+\begin{table}
+  \centering
+  \caption{Admissible values for input $d$ in the BLAKE3 compression function.}%
+  \label{tab:flags}
+  \begin{tabular}{cc}
+    \toprule
+    Flag name             & Value \\ \midrule
+    \texttt{CHUNK\_START} & $2^0$ \\
+    \texttt{CHUNK\_END}   & $2^1$ \\
+    \texttt{PARENT}       & $2^2$ \\
+    \texttt{ROOT}         & $2^3$ \\
+    \texttt{KEYED\_HASH}  & $2^4$ \\
+    \texttt{DERIVE\_KEY}  & $2^5$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \subsection{Modes}\label{sec:modes}
 
 BLAKE3 defines three domain-separated modes: \textbf{hash},
 \textbf{keyed\_hash}, and \textbf{derive\_key}. The modes differ from each
 other in their key words $k_{0} \ldots k_{7}$ and in the additional flags they
-set for every call to the compression function. In the \textbf{hash} mode,
-$k_{0} \ldots k_{7}$ are the constants $\IV_0 \ldots \IV_7$, and no additional
-flags are set. In the \textbf{keyed\_hash} mode, $k_{0} \ldots k_{7}$ are
-parsed in little-endian order from the 32-byte key given by the caller, and the
-\texttt{KEYED\_HASH} flag is set for every compression. In the
-\textbf{derive\_key} mode, the key is again given by the caller, and the
-\texttt{DERIVE\_KEY} flag is set for every compression.
+set for every call to the compression function:
+
+\begin{itemize}
+  \item In the \textbf{hash} mode, $k_{0} \ldots k_{7}$ are the constants $\IV_0 \ldots \IV_7$, and no additional flags are set. 
+  \item In the \textbf{keyed\_hash} mode, $k_{0} \ldots k_{7}$ are parsed in little-endian order from the 32-byte key given by the caller, and the \texttt{KEYED\_HASH} flag is set for every compression.
+  \item  In the \textbf{derive\_key} mode, the key is again given by the caller, and the \texttt{DERIVE\_KEY} flag is set for every compression.
+\end{itemize}
 
 \subsection{Chunk Chaining Values}\label{sec:chunk}
 
@@ -387,46 +413,22 @@ node.
 
 \subsection{Extendable Output}\label{sec:extendable}
 
-The default output of BLAKE3 is 32 bytes, but BLAKE3 can also produce extended
-output of any byte length $\ell < 2^{64}$. This is done by repeating the root
-compression --- that is, the very last call to the compression function, which
-sets the \texttt{ROOT} flag --- with incrementing values of the offset $t$. The
-results of these repeated root compressions are then concatenated into an
-extended output.
+BLAKE3 can produce outputs of any byte length up to $2^{64}$ bytes. 
+This is done by repeating the root compression---that is, the very last 
+call to the compression function, which sets the \texttt{ROOT} flag---with 
+incrementing values of the offset $t$. The results of these repeated root 
+compressions are then concatenated to form the output.
 
-When building an extended output, BLAKE3 uses an extended version of the
-compression function that differs from the regular compression function in its
-final step, returning 16 words instead of 8:
-\begin{align*}
-    h_{0}'  \ & \leftarrow \ v_{0} \oplus  v_{8} &
-    h_{8}'  \ & \leftarrow \ v_{8} \oplus  h_{0} \\
-    h_{1}'  \ & \leftarrow \ v_{1} \oplus  v_{9} &
-    h_{9}'  \ & \leftarrow \ v_{9} \oplus  h_{1} \\
-    h_{2}'  \ & \leftarrow \ v_{2} \oplus  v_{10} &
-    h_{10}' \ & \leftarrow \ v_{10} \oplus  h_{2} \\
-    h_{3}'  \ & \leftarrow \ v_{3} \oplus  v_{11} &
-    h_{11}' \ & \leftarrow \ v_{11} \oplus  h_{3} \\
-    h_{4}'  \ & \leftarrow \ v_{4} \oplus  v_{12} &
-    h_{12}' \ & \leftarrow \ v_{12} \oplus  h_{4} \\
-    h_{5}'  \ & \leftarrow \ v_{5} \oplus  v_{13} &
-    h_{13}' \ & \leftarrow \ v_{13} \oplus  h_{5} \\
-    h_{6}'  \ & \leftarrow \ v_{6} \oplus  v_{14} &
-    h_{14}' \ & \leftarrow \ v_{14} \oplus  h_{6} \\
-    h_{7}'  \ & \leftarrow \ v_{7} \oplus  v_{15} &
-    h_{15}' \ & \leftarrow \ v_{15} \oplus  h_{7}
-\end{align*}
-Note that the first 8 words of the extended compression output are the same as
-the regular compression output. The last 8 words are the input chaining value
-fed forward into the last 8 words of the internal state. Each 16-word output is
+When building the output, BLAKE3 uses the full output of the
+compression function (cf. \S\ref{sec:compression}). Each 16-word output is
 encoded as 64 bytes in little-endian order.
 
-Observe that for the default output, the root compression always uses offset $t
+Observe that for the first output, the root compression always uses offset $t
 = 0$. That is either because it is the last block of the only chunk, which has
-a chunk offset of $0$, or because it is a parent node. For extended output, the
-first root compression sets $t = 0$ as usual but uses the extended compression
-function. Then as long as more bytes are needed, $t$ is incremented by 64, and
-the root compression is repeated on the same inputs. If the target output
-length is not a multiple of 64, the final compression output is truncated.
+a chunk offset of $0$, or because it is a parent node. Then as long as more 
+bytes are needed, $t$ is incremented by 64, and the root compression is 
+repeated on the same inputs. If the target output length is not a multiple of 64, 
+the final compression output is truncated.
 
 Because the repeated root compressions differ only in the value of $t$, the
 implementation can execute any number of them in parallel. The caller can also
