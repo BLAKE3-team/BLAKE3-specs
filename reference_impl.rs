@@ -91,10 +91,10 @@ fn compress_inner(
         IV[1],
         IV[2],
         IV[3],
-        IV[4] ^ (offset as u32),
-        IV[5] ^ ((offset >> 32) as u32),
-        IV[6] ^ block_len,
-        IV[7] ^ flags,
+        (offset as u32),
+        ((offset >> 32) as u32),
+        block_len,
+        flags,
     ];
     for r in 0..ROUNDS {
         round(&mut state, &block_words, &MSG_SCHEDULE[r]);
