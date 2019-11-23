@@ -447,7 +447,27 @@ It's safe :)
 
 \section{Memory Requirement}\label{sec:memory}
 
-It's big :(
+BLAKE3 has a larger memory requirement than BLAKE2. An incremental
+implementation needs to store a 32-byte chaining value for every level of the
+tree below the root. The maximum input size is $2^{64}-1$ bytes, and the chunk
+size is $2^{11}$ bytes, giving a maximum tree depth of $64 - 11 = 53$. The
+stack of chaining values thus requires $53 \cdot 32 = 1696$ bytes. The
+incremental state of the current chunk also requires at least 104 bytes for the
+chaining value, the message block, and the chunk offset. The total size of the
+reference implementation is 1848 bytes.
+
+For comparison, BLAKE2s has a memory footprint similar to the BLAKE3 chunk
+state alone, at least 104 bytes. BLAKE2b has twice the chaining value size and
+block size, requiring at least 200 bytes. And the parallel modes BLAKE2bp and
+BLAKE2sp both require at least 776 bytes.
+
+Space-constrained implementations of BLAKE3 can save space by restricting the
+maximum input size. For example, the maximum size of an IPv6 "jumbogram" is
+$2^{32}-1$ bytes, or just under 4~GiB. At this size, the tree depth is 21 and
+the chaining value stack is $21 \cdot 32 = 672$ bytes. For another example, the
+maximum size of a TLS record is $2^{14}$ bytes, or exactly 16 KiB. At this
+size, the tree depth is 3 and the chaining value stack is $3 \cdot 32 = 96$
+bytes.
 
 \section{Implementation}\label{sec:implementation}
 
