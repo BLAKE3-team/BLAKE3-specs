@@ -521,17 +521,14 @@ mode in BLAKE3 does not require any extra compressions.
 
 \subsection{Key Derivation}\label{sec:kdf}
 
-BLAKE3 has explicit support for a key derivation mode, \textbf{derive\_key}.
-The input bytes should be a hardcoded, globally unique context string. A good
-default format for such strings is \texttt{"[application] [date] [purpose]"}, e.g.,
-\texttt{"example.com 2019-12-25 16:18:03 session tokens v1"}. If the input key material
-is not already a 256-bit key, it should first be converted into 256 bits using
-the default output of the BLAKE3 \textbf{hash} mode.
-
-The \textbf{derive\_key} mode is intended to replace the BLAKE2 personalization
-parameter for its most common use cases. Like \textbf{keyed\_hash}, it does not
-require any extra compressions. For context strings up to 64 bytes and derived
-key lengths up to 64 bytes, \textbf{derive\_key} is a single compression.
+BLAKE3 has explicit support for a key derivation mode, \textbf{derive\_key}. In
+this mode the input bytes should be a hardcoded, globally unique context
+string. A good default format for such strings is \texttt{"[application] [date]
+[purpose]"}, e.g., \texttt{"example.com 2019-12-25 16:18:03 session tokens
+v1"}. If the input key material is not already 256 bits, it should be converted
+to 256 bits first using the \textbf{hash} mode. The \textbf{derive\_key} mode
+is intended to replace the BLAKE2 personalization parameter for its most common
+use cases.
 
 Key derivation can encourage better security than personalization, by
 cryptographically isolating different components of an application from one
@@ -544,6 +541,11 @@ possible to use the same key with \textbf{keyed\_hash} and with
 \textbf{derive\_key}. This can be necessary for backwards compatibility when an
 application adds a new use case for an existing key, if the original use case
 did not include a context-specific key derivation step.
+
+Like \textbf{keyed\_hash}, \textbf{derive\_key} does not require any extra
+compressions. For context strings up to 64 bytes and derived key lengths up to
+64 bytes, \textbf{derive\_key} is a single compression. For comparison, HKDF
+generally requires eight compressions.
 
 \subsection{Streaming Verification}\label{sec:streamingverification}
 
