@@ -8,6 +8,7 @@ import seaborn
 import sys
 
 HASH_NAMES = [
+    ("blake3", "BLAKE3"),
     ("blake2s", "BLAKE2s"),
     ("blake2b", "BLAKE2b"),
     ("blake2sp", "BLAKE2sp"),

@@ -25,6 +25,18 @@ version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "baokeshed"
+version = "0.1.0"
+source = "git+https://github.com/oconnor663/baokeshed?rev=02543be8d36d4483175e83fd09b9091fed937d49#02543be8d36d4483175e83fd09b9091fed937d49"
+dependencies = [
+ "arrayref 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "arrayvec 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cc 1.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
+ "constant_time_eq 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -53,6 +65,7 @@ dependencies = [
 name = "blake3_paper_benchmarks"
 version = "0.0.0"
 dependencies = [
+ "baokeshed 0.1.0 (git+https://github.com/oconnor663/baokeshed?rev=02543be8d36d4483175e83fd09b9091fed937d49)",
  "blake2b_simd 0.5.9 (git+https://github.com/oconnor663/blake2_simd?rev=1efb300b899e213d674c875f18c93b5c60125f8c)",
  "blake2s_simd 0.5.9 (git+https://github.com/oconnor663/blake2_simd?rev=1efb300b899e213d674c875f18c93b5c60125f8c)",
  "criterion 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -629,6 +642,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum arrayvec 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 "checksum atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)" = "1803c647a3ec87095e7ae7acfca019e98de5ec9a7d01343f611cf3152ed71a90"
 "checksum autocfg 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "1d49d90015b3c36167a20fe2810c5cd875ad504b39cff3d4eae7977e6b7c1cb2"
+"checksum baokeshed 0.1.0 (git+https://github.com/oconnor663/baokeshed?rev=02543be8d36d4483175e83fd09b9091fed937d49)" = "<none>"
 "checksum bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 "checksum blake2b_simd 0.5.9 (git+https://github.com/oconnor663/blake2_simd?rev=1efb300b899e213d674c875f18c93b5c60125f8c)" = "<none>"
 "checksum blake2s_simd 0.5.9 (git+https://github.com/oconnor663/blake2_simd?rev=1efb300b899e213d674c875f18c93b5c60125f8c)" = "<none>"
