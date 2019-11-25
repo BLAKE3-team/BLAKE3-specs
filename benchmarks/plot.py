@@ -41,8 +41,7 @@ def main():
     target = Path(sys.argv[1])
     try:
         title = target.with_name(target.name + ".title").open().read().strip()
-    except FileNotFoundError as e:
-        print(e)
+    except FileNotFoundError:
         title = ""
     columns = ["function", "size", "throughput"]
     data = []
