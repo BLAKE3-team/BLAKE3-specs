@@ -42,15 +42,15 @@ fn benchmarks(c: &mut Criterion) {
         })
         .with_function("blake2s", |b, param| {
             let mut input = RandomInput::new(*param);
-            b.iter(|| blake2b_simd::blake2b(input.get()));
+            b.iter(|| blake2s_simd::blake2s(input.get()));
         })
         .with_function("blake2bp", |b, param| {
             let mut input = RandomInput::new(*param);
-            b.iter(|| blake2s_simd::blake2sp::blake2sp(input.get()));
+            b.iter(|| blake2b_simd::blake2bp::blake2bp(input.get()));
         })
         .with_function("blake2sp", |b, param| {
             let mut input = RandomInput::new(*param);
-            b.iter(|| blake2b_simd::blake2bp::blake2bp(input.get()));
+            b.iter(|| blake2s_simd::blake2sp::blake2sp(input.get()));
         })
         .with_function("sha256", |b, param| {
             let mut input = RandomInput::new(*param);
