@@ -61,14 +61,16 @@ def main():
 
     seaborn.set()
     pyplot.figure(figsize=[20, 10])
+    pyplot.ylim(0, 1.1 * max(x[2] for x in data))
     seaborn.set_context("talk")
-    plot = seaborn.barplot(data=dataframe,
-                           x="size",
-                           y="throughput",
-                           hue="function")
-    plot.set(xlabel="input bytes",
-             ylabel="throughput (MB/s)",
-             title=title)
+    plot = seaborn.lineplot(
+        data=dataframe,
+        x="size",
+        y="throughput",
+        hue="function",
+        sort=False,
+    )
+    plot.set(xlabel="input bytes", ylabel="throughput (MB/s)", title=title)
     # plot.set_xticklabels(rotation=30)
     # pyplot.savefig("out.svg")
     pyplot.show()
