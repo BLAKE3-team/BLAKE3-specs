@@ -1,0 +1,19 @@
+[package]
+name = "blake3_paper_benchmarks"
+version = "0.0.0"
+edition = "2018"
+
+[[bench]]
+name = "bench"
+harness = false
+
+[dependencies]
+# The uninline_portable feature improves BLAKE2b performance on ARM Cortex-M0.
+# That makes BLAKE2b performance on that platform in these benchmarks better
+# than what you get from e.g. OpenSSL BLAKE2b, though still worse than BLAKE2s.
+blake2b_simd = { git = "https://github.com/oconnor663/blake2_simd", rev = "1efb300b899e213d674c875f18c93b5c60125f8c", features = ["uninline_portable"] }
+blake2s_simd = { git = "https://github.com/oconnor663/blake2_simd", rev = "1efb300b899e213d674c875f18c93b5c60125f8c" }
+criterion = "0.3.0"
+openssl = { version = "0.10.26", features = ["vendored"] }
+page_size = "0.4.1"
+rand = "0.7.2"

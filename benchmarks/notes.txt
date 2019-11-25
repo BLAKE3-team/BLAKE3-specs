@@ -1,0 +1,12 @@
+The blake2b_simd and blake2s_simd code comes from the "cortex-m0-benches"
+branch of https://github.com/oconnor663/blake2_simd, specifically
+https://github.com/oconnor663/blake2_simd/commit/ebec83dfdd0e3b46e8dda350c05ea60a405e1c83.
+This branch removes inline(always) directives for the portable implementation
+of BLAKE2b, which hurt performance on ARM Cortex-M0, presumably for cache size
+reasons. Most implementations of BLAKE2b always do this inlining, including
+OpenSSL, so the performance of BLAKE2b on ARM Cortex-M0 in these benchmarks is
+better than in most real-world applications. (Still substantially worse than
+BLAKE2s on that platform, of course.)
+
+The "baokeshed" crate is a prototype implementation of BLAKE3 with a silly
+name.
