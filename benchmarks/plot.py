@@ -8,7 +8,12 @@ import seaborn
 import sys
 
 HASH_NAMES = [
+    # Note that --features=rayon determines whether this bench uses
+    # multithreading.
     ("blake3", "BLAKE3"),
+
+    # Use this instead for the AVX-512 results, with --features=c_detect:
+    # ("blake3_c", "BLAKE3"),
     ("blake2s", "BLAKE2s"),
     ("blake2b", "BLAKE2b"),
     ("blake2sp", "BLAKE2sp"),
@@ -43,11 +48,6 @@ SIZES = [
 
 def main():
     target = Path(sys.argv[1])
-    try:
-        title = target.with_name(target.name + ".title").open().read().strip()
-    except FileNotFoundError:
-        title = ""
-
     names = []
     throughputs = []
     sizes = []
@@ -75,30 +75,27 @@ def main():
     dataframe = pandas.DataFrame(throughputs, sizes, names)
 
     seaborn.set()
-    pyplot.rcParams["axes.labelsize"] = 20
-    pyplot.figure(figsize=[20, 10])
+    # pyplot.rcParams["axes.labelsize"] = 20
+    # pyplot.rcParams["pgf.rcfonts"] = False
+    # pyplot.rcParams["font.family"] = "serif"
+    # pyplot.figure(figsize=[20, 10])
     pyplot.ylim(0, 1.1 * max(max(col) for col in throughputs))
-    seaborn.set_context("talk")
+    seaborn.set_context("paper")
+    # seaborn.set_context("talk")
     dash_styles = [
-        "",
-        (4, 1.5),
-        (1, 1),
-        (3, 1, 1.5, 1),
-        (5, 1, 1, 1),
-        (5, 1, 2, 1, 2, 1),
-        (2, 2, 3, 1.5),
-        (1, 2.5, 3, 1.2)
+        "", (4, 1.5), (1, 1), (3, 1, 1.5, 1), (5, 1, 1, 1), (5, 1, 2, 1, 2, 1),
+        (2, 2, 3, 1.5), (1, 2.5, 3, 1.2)
     ]
     plot = seaborn.lineplot(
         data=dataframe,
         sort=False,
         dashes=dash_styles,
     )
-    plot.set(xlabel="\nInput Length", ylabel="Throughput (MB/s)\n", title=title)
+    plot.set(ylabel="Throughput (MB/s)\n")
     pyplot.legend(loc="best", framealpha=1)
     # pyplot.legend(loc="lower right", framealpha=1)
-    # plot.set_xticklabels(rotation=30)
-    # pyplot.savefig("out.svg")
+    plot.set_xticklabels(sizes, rotation=270)
+    # pyplot.savefig(target.with_suffix(".pgf"), bbox_inches="tight")
     pyplot.show()
 
 
