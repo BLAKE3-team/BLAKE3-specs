@@ -47,11 +47,14 @@ def main():
         title = target.with_name(target.name + ".title").open().read().strip()
     except FileNotFoundError:
         title = ""
-    columns = ["function", "size", "throughput"]
-    data = []
+
+    names = []
+    throughputs = []
+    sizes = []
     for hash_name, hash_name_pretty in HASH_NAMES:
+        names.append(hash_name_pretty)
         hash_dir = target / "bench_group" / hash_name
-        for size, size_pretty in SIZES:
+        for size_i, (size, size_pretty) in enumerate(SIZES):
             estimates_path = hash_dir / str(size) / "new/estimates.json"
             try:
                 estimates = json.load(estimates_path.open())
@@ -64,19 +67,31 @@ def main():
             # upper = slope["confidence_interval"]["upper_bound"]
             # lower = slope["confidence_interval"]["lower_bound"]
             mbps_throughput = size / point * 1000
-            data.append([hash_name_pretty, size_pretty, mbps_throughput])
-    dataframe = pandas.DataFrame(data, columns=columns)
+            if len(sizes) == size_i:
+                sizes.append(size_pretty)
+            if len(throughputs) == size_i:
+                throughputs.append([])
+            throughputs[size_i].append(mbps_throughput)
+    dataframe = pandas.DataFrame(throughputs, sizes, names)
 
     seaborn.set()
     pyplot.figure(figsize=[20, 10])
-    pyplot.ylim(0, 1.1 * max(x[2] for x in data))
+    pyplot.ylim(0, 1.1 * max(max(col) for col in throughputs))
     seaborn.set_context("talk")
+    dash_styles = [
+        "",
+        (4, 1.5),
+        (1, 1),
+        (3, 1, 1.5, 1),
+        (5, 1, 1, 1),
+        (5, 1, 2, 1, 2, 1),
+        (2, 2, 3, 1.5),
+        (1, 2.5, 3, 1.2)
+    ]
     plot = seaborn.lineplot(
         data=dataframe,
-        x="size",
-        y="throughput",
-        hue="function",
         sort=False,
+        dashes=dash_styles,
     )
     plot.set(xlabel="input bytes", ylabel="throughput (MB/s)", title=title)
     # plot.set_xticklabels(rotation=30)
