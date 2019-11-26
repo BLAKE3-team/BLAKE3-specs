@@ -94,6 +94,8 @@ def main():
         dashes=dash_styles,
     )
     plot.set(xlabel="input bytes", ylabel="throughput (MB/s)", title=title)
+    pyplot.legend(loc="best", framealpha=1)
+    # pyplot.legend(loc="lower right", framealpha=1)
     # plot.set_xticklabels(rotation=30)
     # pyplot.savefig("out.svg")
     pyplot.show()
