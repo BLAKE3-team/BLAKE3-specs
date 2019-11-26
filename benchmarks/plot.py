@@ -34,6 +34,10 @@ SIZES = [
     (2**18, "256 KiB"),
     (2**19, "512 KiB"),
     (2**20, "1 MiB"),
+    (2**21, "2 MiB"),
+    (2**22, "4 MiB"),
+    (2**23, "8 MiB"),
+    (2**24, "16 MiB"),
 ]
 
 
@@ -49,7 +53,12 @@ def main():
         hash_dir = target / "bench_group" / hash_name
         for size, size_pretty in SIZES:
             estimates_path = hash_dir / str(size) / "new/estimates.json"
-            estimates = json.load(estimates_path.open())
+            try:
+                estimates = json.load(estimates_path.open())
+            except FileNotFoundError:
+                # Some benchmark runs use longer inputs than others, so we
+                # ignore missing sizes here.
+                continue
             slope = estimates["Slope"]
             point = slope["point_estimate"]
             # upper = slope["confidence_interval"]["upper_bound"]
