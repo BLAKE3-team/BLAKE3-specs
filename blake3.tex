@@ -537,6 +537,29 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 
 It's fast :)
 
+\begin{figure}[h]
+\input{./benchmarks/results/avx2_rayon.pgf}
+\caption{Throughput at different message lengths on Intel Kaby Lake with AVX2
+    and 4 physical cores. This is a multi-threaded implementation of BLAKE3.}
+\label{fig:avx2_rayon}
+\end{figure}
+
+% TODO: This figure compares an AVX-512 implementation of BLAKE3 to an AVX2
+% implementation of BLAKE2, making BLAKE2 look worse than it should. We need a
+% proper AVX-512 implementation of BLAKE2, using the new rotation instructions.
+\begin{figure}[h]
+\input{./benchmarks/results/avx512_detect_c.pgf}
+\caption{Throughput at different message lengths on Intel Skylake-SP with
+    AVX-512. This is a single-threaded implementation of BLAKE3.}
+\label{fig:avx512_c}
+\end{figure}
+
+\begin{figure}[h]
+\input{./benchmarks/results/rpizero.pgf}
+\caption{Throughput at different message lengths on ARM Cortex-M0.}
+\label{fig:rpizero}
+\end{figure}
+
 \section{Security}\label{sec:security}
 
 It's safe :)
