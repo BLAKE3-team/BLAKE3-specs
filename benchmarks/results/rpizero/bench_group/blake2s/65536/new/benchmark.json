@@ -1,0 +1,1 @@
+{"group_id":"bench_group","function_id":"blake2s","value_str":"65536","throughput":{"Bytes":65536},"full_id":"bench_group/blake2s/65536","directory_name":"bench_group/blake2s/65536","title":"bench_group/blake2s/65536"}
