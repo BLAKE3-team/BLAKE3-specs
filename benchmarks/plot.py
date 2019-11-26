@@ -75,6 +75,7 @@ def main():
     dataframe = pandas.DataFrame(throughputs, sizes, names)
 
     seaborn.set()
+    pyplot.rcParams["axes.labelsize"] = 20
     pyplot.figure(figsize=[20, 10])
     pyplot.ylim(0, 1.1 * max(max(col) for col in throughputs))
     seaborn.set_context("talk")
@@ -93,7 +94,7 @@ def main():
         sort=False,
         dashes=dash_styles,
     )
-    plot.set(xlabel="input bytes", ylabel="throughput (MB/s)", title=title)
+    plot.set(xlabel="\nInput Length", ylabel="Throughput (MB/s)\n", title=title)
     pyplot.legend(loc="best", framealpha=1)
     # pyplot.legend(loc="lower right", framealpha=1)
     # plot.set_xticklabels(rotation=30)
