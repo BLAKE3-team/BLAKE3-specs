@@ -9,6 +9,7 @@ harness = false
 
 [features]
 c_detect = ["blake3/c_detect"]
+rayon = ["blake3/rayon"]
 
 [dependencies]
 # "baokeshed" is a BLAKE3 prototype with a silly name.
