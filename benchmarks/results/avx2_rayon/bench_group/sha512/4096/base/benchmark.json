@@ -1,0 +1,1 @@
+{"group_id":"bench_group","function_id":"sha512","value_str":"4096","throughput":{"Bytes":4096},"full_id":"bench_group/sha512/4096","directory_name":"bench_group/sha512/4096","title":"bench_group/sha512/4096"}
