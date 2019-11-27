@@ -378,25 +378,121 @@ set for every call to the compression function:
 
 \subsection{Chunk Chaining Values}\label{sec:chunk}
 
-Processing a chunk is structurally similar to processing input in BLAKE2s or
-BLAKE2b. Each chunk of up to 2048 bytes is split into blocks of up to 64 bytes.
+Processing a chunk is structurally similar to the sequential hashing mode of BLAKE2. Each chunk of up to 2048 bytes is split into blocks of up to 64 bytes.
 The last block of the last chunk may be shorter, but not empty, unless the
-entire input is empty. The short block, if any, is padded with zeros to be 64
-bytes. Each block is parsed in little-endian order into message words $m_{0}
+entire input is empty. The last block, if necessary, is padded with zeros to be 64
+bytes. 
+
+Each block is parsed in little-endian order into message words $m_{0}
 \ldots m_{15}$ and compressed. The input chaining value $h_{0} \ldots h_{7}$
-for the first block of each chunk is the key words $k_{0} \ldots k_{7}$. The
-input chaining value for subsequent blocks in each chunk is the output of the
-compression function for the previous block. The offset $t$ for each block is
-the starting byte index of its chunk, 0 for all blocks in the first chunk, 2048
-for all blocks in the second chunk, and so on. The block length $b$ is the
-number of input bytes in each block, 64 for all blocks except the last block of
-the last chunk, which may be short. The first block of each chunk sets the
-\texttt{CHUNK\_START} flag, and the last block of each chunk sets the
+for the first block of each chunk is comprised of the key words $k_{0} \ldots k_{7}$. The
+input chaining value for subsequent blocks in each chunk is the output of the truncated
+compression function for the previous block. 
+
+The remaining compression function parameters are handled as follows (see also Figure~\ref{fig:chunk} for an example):
+\begin{itemize}
+\item The offset $t$ for each block is
+the starting byte index of its chunk, i.e., $0$ for all blocks in the first chunk, $2048$
+for all blocks in the second chunk, and so on. 
+\item The block length $b$ is the
+number of input bytes in each block, i.e., $64$ for all blocks except the last block of
+the last chunk, which may be short. 
+\item The first block of each chunk sets the
+\texttt{CHUNK\_START} flag (cf. Table~\ref{tab:flags}), and the last block of each chunk sets the
 \texttt{CHUNK\_END} flag. If a chunk contains only one block, that block sets
 both \texttt{CHUNK\_START} and \texttt{CHUNK\_END}. If a chunk is the root of
 its tree, the last block of that chunk also sets the \texttt{ROOT} flag. The
 output of the compression function for the last block in a chunk is the
 chaining value of that chunk.
+\end{itemize}
+
+\begin{figure}
+\centering
+\begin{tikzpicture}[
+comp/.style={draw, trapezium, trapezium left angle=0, trapezium right angle=45, shape border rotate=270, minimum height=0.5cm, minimum width=1.5cm, trapezium stretches=false,anchor=north},
+fullcomp/.style={draw, rectangle, minimum height=1.5cm, minimum width=0.75cm, trapezium stretches=false,anchor=north},
+]
+
+\begin{scope}[xshift=0cm]
+\node[comp] (f0) {$F$};
+\node[above=0.5cm of f0] (m0) {$m_0$};
+\coordinate (tmp) at ($(f0.north west) + (-0.5cm, -0.25cm)$);
+\node[below = 0.00cm of tmp,scale=0.50,anchor=east] (iv) {$\mathrm{IV}$};
+\node[below = 0.33cm of tmp,scale=0.50,anchor=east] (t0) {$t=0$};
+\node[below = 0.66cm of tmp,scale=0.50,anchor=east] (b0) {$b=64$};
+\node[below = 0.99cm of tmp,scale=0.50,anchor=east] (d0) {$d=2^0$};
+
+\draw[-latex] (m0) -- (f0);
+\draw[-latex] (iv) -- (iv -| f0.west);
+\draw[-latex] (t0) -- (t0 -| f0.west);
+\draw[-latex] (b0) -- (b0 -| f0.west);
+\draw[-latex] (d0) -- (d0 -| f0.west);
+\end{scope}
+
+\begin{scope}[xshift=3cm]
+\node[comp] (f1) {$F$};
+\node[above=0.5cm of f1] (m1) {$m_1$};
+\coordinate (tmp) at ($(f1.north west) + (-0.5cm, -0.25cm)$);
+
+\node[below = 0.33cm of tmp,scale=0.5,anchor=east] (t1) {$t=0$};
+\node[below = 0.66cm of tmp,scale=0.5,anchor=east] (b1) {$b=64$};
+\node[below = 0.99cm of tmp,scale=0.5,anchor=east] (d1) {$d=0$};
+
+\draw[-latex] (m1) -- (f1);
+\draw[-latex] (t1) -- (t1 -| f1.west);
+\draw[-latex] (b1) -- (b1 -| f1.west);
+\draw[-latex] (d1) -- (d1 -| f1.west);
+\end{scope}
+
+\begin{scope}[xshift=6cm]
+\node[fullcomp] (f2) {$F$};
+\node[above=0.5cm of f2] (m2) {$m_2$};
+\coordinate (tmp) at ($(f2.north west) + (-0.5cm, -0.25cm)$);
+
+\node[below = 0.33cm of tmp,scale=0.5,anchor=east] (t2) {$t=0$};
+\node[below = 0.66cm of tmp,scale=0.5,anchor=east] (b2) {$b=53$};
+\node[below = 0.99cm of tmp,scale=0.5,anchor=east] (d2) {$d=2^1+2^3$};
+
+\draw[-latex] (m2) -- (f2);
+\draw[-latex] (t2) -- (t2 -| f2.west);
+\draw[-latex] (b2) -- (b2 -| f2.west);
+\draw[-latex] (d2) -- (d2 -| f2.west);
+\end{scope}
+
+\begin{scope}[xshift=6cm,yshift=-3cm]
+\node[fullcomp] (f3) {$F$};
+\node[above=0.5cm of f3] (m3) {$m_2$};
+\coordinate (tmp) at ($(f3.north west) + (-0.5cm, -0.25cm)$);
+
+\node[below = 0.33cm of tmp,scale=0.5,anchor=east] (t3) {$t=64$};
+\node[below = 0.66cm of tmp,scale=0.5,anchor=east] (b3) {$b=53$};
+\node[below = 0.99cm of tmp,scale=0.5,anchor=east] (d3) {$d=2^1+2^3$};
+
+\draw[-latex] (m3) -- (f3);
+\draw[-latex] (t3) -- (t3 -| f3.west);
+\draw[-latex] (b3) -- (b3 -| f3.west);
+\draw[-latex] (d3) -- (d3 -| f3.west);
+\end{scope}
+
+\coordinate (tmp) at (f1.west |- iv);
+\coordinate (tmp2) at ($(f0)!0.40!(f1)$);
+\draw[-latex] (f0) -- (f0 -| tmp2) -- (tmp2 |- tmp) -- (tmp);
+\coordinate (tmp) at (f2.west |- iv);
+\coordinate (tmp2) at ($(f1)!0.40!(f2)$);
+\draw[-latex] (f1) -- (f1 -| tmp2) -- (tmp2 |- tmp) -- (tmp);
+
+\coordinate (tmp) at ($(f3.north west) + (-0cm, -0.25cm)$);
+\coordinate (tmp2) at ($(f1.east) + (0.5cm, 0)$);
+\draw[-latex] (f1.east) -- (tmp2) -- (tmp2 |- tmp) -- (tmp);
+
+\node[right=0.5cm of f2] (out) {$h_0$};
+\draw[-latex] (f2) -- (out);
+\node[right=0.5cm of f3] (out) {$h_1$};
+\draw[-latex] (f3) -- (out);
+
+\end{tikzpicture}
+\caption{Example of compression function inputs when hashing a 181-byte input $(m_0, m_1, m_2)$ into a 128-byte output $(h_0, h_1)$. Trapezia indicate that the compression function output is truncated to 256 bits.}\label{fig:chunk}
+\end{figure}
 
 \subsection{Parent Node Chaining Values}\label{sec:parent}
 
