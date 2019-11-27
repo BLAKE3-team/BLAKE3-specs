@@ -159,10 +159,10 @@ that of BLAKE2b, and BLAKE3 can scale further to any number of cores. On ARM
 Cortex-M0, throughput is 30\% higher than BLAKE2s and again triple that of
 BLAKE2b.
 
-Internally, BLAKE3 divides its input into 2 KiB chunks and arranges those
+Internally, BLAKE3 divides its input into 2~KiB chunks and arranges those
 chunks as the leaves of a binary tree. This tree structure means that there is
 no limit to the parallelism that BLAKE3 can exploit, given enough input. The
-direct benefit of that parallelism is very high throughput on platforms with
+direct benefit of this parallelism is very high throughput on platforms with
 SIMD support, including all modern x86 processors. Another benefit of hashing
 chunks in parallel is that the implementation can use SIMD vectors of any
 width, regardless of the word size of the compression function. That leaves us
@@ -192,8 +192,8 @@ The biggest changes from BLAKE2 to BLAKE3 are:
     \item The space formerly occupied by the parameter block is now used for
         the optional 256-bit key, so \textbf{keying is zero-cost}.
     \item BLAKE3 has built-in support for \textbf{extendable output}. Like
-        BLAKE2X, but unlike SHA\=/3 or HKDF, extended output is fully
-        parallelizable.
+        BLAKE2X, but unlike SHA\=/3 or HKDF, extended output is parallelizable
+        and seekable.
 \end{itemize}
 
 \section{Specification}\label{sec:specification}
@@ -306,7 +306,10 @@ t_{0} & t_{1} & b & d
 The $\IV_{0} \ldots \IV_{7}$ constants are the same as in
 BLAKE2s, and they are reproduced in Appendix~\ref{sec:ivconstants}.
 
-The compression function applies a 7-round keyed permutation $v' = E(m, v)$ to the state $v_0, \dots, v_{15}$, keyed by the message $m_0, \dots, m_{15}$. This keyed permutation here is identical to the one underlying BLAKE2s, and is reproduced in Appendix~\ref{sec:roundfn}.
+The compression function applies a 7-round keyed permutation $v' = E(m, v)$ to
+the state $v_0, \dots, v_{15}$, keyed by the message $m_0, \dots, m_{15}$. The
+keyed permutation here is identical to the one underlying BLAKE2s, and is
+reproduced in Appendix~\ref{sec:roundfn}.
 
 The output of the compression function $h_{0}' \ldots h_{15}'$ is
 defined as:
@@ -365,15 +368,15 @@ compression. Their names and values are given in Table~\ref{tab:flags}.
 
 \subsection{Modes}\label{sec:modes}
 
-BLAKE3 defines three domain-separated modes: \textbf{hash},
-\textbf{keyed\_hash}, and \textbf{derive\_key}. The modes differ from each
+BLAKE3 defines three domain-separated modes: \texttt{hash},
+\texttt{keyed\_hash}, and \texttt{derive\_key}. The modes differ from each
 other in their key words $k_{0} \ldots k_{7}$ and in the additional flags they
 set for every call to the compression function:
 
 \begin{itemize}
-  \item In the \textbf{hash} mode, $k_{0} \ldots k_{7}$ are the constants $\IV_0 \ldots \IV_7$, and no additional flags are set. 
-  \item In the \textbf{keyed\_hash} mode, $k_{0} \ldots k_{7}$ are parsed in little-endian order from the 32-byte key given by the caller, and the \texttt{KEYED\_HASH} flag is set for every compression.
-  \item  In the \textbf{derive\_key} mode, the key is again given by the caller, and the \texttt{DERIVE\_KEY} flag is set for every compression.
+  \item In the \texttt{hash} mode, $k_{0} \ldots k_{7}$ are the constants $\IV_0 \ldots \IV_7$, and no additional flags are set. 
+  \item In the \texttt{keyed\_hash} mode, $k_{0} \ldots k_{7}$ are parsed in little-endian order from the 32-byte key given by the caller, and the \texttt{KEYED\_HASH} flag is set for every compression.
+  \item  In the \texttt{derive\_key} mode, the key is again given by the caller, and the \texttt{DERIVE\_KEY} flag is set for every compression.
 \end{itemize}
 
 \subsection{Chunk Chaining Values}\label{sec:chunk}
@@ -504,8 +507,8 @@ the concatenated chaining values of the two children, first the left then the
 right. The offset $t$ for parent nodes is always 0. The number of bytes $b$ for
 parent nodes is always 64. Parent nodes set the \texttt{PARENT} flag. If a
 parent node is the root of the tree, it also sets the \texttt{ROOT} flag. The
-the output of the compression function is the chaining value of the parent
-node.
+first 8 words of the output of the compression function is the chaining value
+of the parent node.
 
 \subsection{Extendable Output}\label{sec:extendable}
 
@@ -539,8 +542,9 @@ It's fast :)
 
 \begin{figure}[h]
 \input{./benchmarks/results/avx2_rayon.pgf}
-\caption{Throughput at different message lengths on Intel Kaby Lake with AVX2
-    and 4 physical cores. This is a multi-threaded implementation of BLAKE3.}
+\caption{Throughput for different input lengths on Intel Kaby Lake with AVX2
+    and 4 physical cores, with Turbo Boost disabled. This is a multi-threaded
+    implementation of BLAKE3.}
 \label{fig:avx2_rayon}
 \end{figure}
 
@@ -549,14 +553,14 @@ It's fast :)
 % proper AVX-512 implementation of BLAKE2, using the new rotation instructions.
 \begin{figure}[h]
 \input{./benchmarks/results/avx512_detect_c.pgf}
-\caption{Throughput at different message lengths on Intel Skylake-SP with
+\caption{Throughput for different input lengths on Intel Skylake-SP with
     AVX-512. This is a single-threaded implementation of BLAKE3.}
 \label{fig:avx512_c}
 \end{figure}
 
 \begin{figure}[h]
 \input{./benchmarks/results/rpizero.pgf}
-\caption{Throughput at different message lengths on ARM Cortex-M0.}
+\caption{Throughput for different input lengths on ARM Cortex-M0.}
 \label{fig:rpizero}
 \end{figure}
 
@@ -584,7 +588,7 @@ Space-constrained implementations of BLAKE3 can save space by restricting the
 maximum input size. For example, the maximum size of an IPv6 "jumbogram" is
 $2^{32}-1$ bytes, or just under 4~GiB. At this size, the tree depth is 21 and
 the chaining value stack is $21 \cdot 32 = 672$ bytes. For another example, the
-maximum size of a TLS record is $2^{14}$ bytes, or exactly 16 KiB. At this
+maximum size of a TLS record is $2^{14}$ bytes, or exactly 16~KiB. At this
 size, the tree depth is 3 and the chaining value stack is $3 \cdot 32 = 96$
 bytes.
 
@@ -632,22 +636,21 @@ diagram.
 \subsection{Message Authentication Codes}\label{sec:mac}
 
 Like BLAKE2, BLAKE3 has explicit support for a keyed mode,
-\textbf{keyed\_hash}. This removes the need for a separate construction like
-HMAC. The \textbf{keyed\_hash} mode is also more efficient than keyed BLAKE2 or
+\texttt{keyed\_hash}. This removes the need for a separate construction like
+HMAC. The \texttt{keyed\_hash} mode is also more efficient than keyed BLAKE2 or
 HMAC for short messages. BLAKE2 requires an extra compression for the key
-block, and HMAC requires three extra compressions. The \textbf{keyed\_hash}
+block, and HMAC requires three extra compressions. The \texttt{keyed\_hash}
 mode in BLAKE3 does not require any extra compressions.
 
 \subsection{Key Derivation}\label{sec:kdf}
 
-BLAKE3 has explicit support for a key derivation mode, \textbf{derive\_key}. In
+BLAKE3 has explicit support for a key derivation mode, \texttt{derive\_key}. In
 this mode the input bytes should be a hardcoded, globally unique context
 string. A good default format for such strings is \texttt{"[application] [date]
 [purpose]"}, e.g., \texttt{"example.com 2019-12-25 16:18:03 session tokens
-v1"}. If the input key material is not already 256 bits, it should be converted
-to 256 bits first using the \textbf{hash} mode. The \textbf{derive\_key} mode
-is intended to replace the BLAKE2 personalization parameter for its most common
-use cases.
+v1"}. If the key material is not already 256 bits, it can be converted to 256
+bits using the \texttt{hash} mode. The \texttt{derive\_key} mode is intended to
+replace the BLAKE2 personalization parameter for its most common use cases.
 
 Key derivation can encourage better security than personalization, by
 cryptographically isolating different components of an application from one
@@ -656,14 +659,14 @@ leaking its key. When an application needs to use one secret in multiple
 algorithms or contexts, the best practice is to derive a separate key for each
 use case, such that the original secret is only used with the key derivation
 function. However, because the BLAKE3 modes are domain-separated, it is also
-possible to use the same key with \textbf{keyed\_hash} and with
-\textbf{derive\_key}. This can be necessary for backwards compatibility when an
+possible to use the same key with \texttt{keyed\_hash} and with
+\texttt{derive\_key}. This can be necessary for backwards compatibility when an
 application adds a new use case for an existing key, if the original use case
 did not include a context-specific key derivation step.
 
-Like \textbf{keyed\_hash}, \textbf{derive\_key} does not require any extra
+Like \texttt{keyed\_hash}, \texttt{derive\_key} does not require any extra
 compressions. For context strings up to 64 bytes and derived key lengths up to
-64 bytes, \textbf{derive\_key} is a single compression. For comparison, HKDF
+64 bytes, \texttt{derive\_key} is a single compression. For comparison, HKDF
 generally requires eight compressions.
 
 \subsection{Streaming Verification}\label{sec:streamingverification}
@@ -717,9 +720,10 @@ Giant disk images.
 
     That is, a round applies a G function to each of the columns in parallel,
     and then to each of the diagonals in parallel. $\GG_i(a, b, c, d)$ is
-    defined as follows. $\ggg$~denotes bitwise right rotation, and
-    $m_{\sigma_r(x)}$ is the message word whose index is the
-    $x$\textsuperscript{th} entry in the message schedule for round $r$:
+    defined as follows. $\oplus$~denotes bitwise exclusive-or, $\ggg$~denotes
+    bitwise right rotation, and $m_{\sigma_r(x)}$ is the message word whose
+    index is the $x$\textsuperscript{th} entry in the message schedule for
+    round $r$:
 \begin{align*}
     a \ & \leftarrow \ a + b + m_{\sigma_r(2i)} \\
     d \ & \leftarrow \ (d \oplus a) \ggg 16 \\
