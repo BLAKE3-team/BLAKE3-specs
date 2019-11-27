@@ -53,6 +53,7 @@
 \usepackage[shortcuts]{extdash} % unbreakable dashes, e.g. SHA\=/2
 % \usepackage[outputdir=build]{minted} % syntax highlighting using Pygments
 \usepackage[title]{appendix} % add "Appendix" to each appendix section title
+\usepackage[font=small,labelfont=bf]{caption}
 \usetikzlibrary
 {
   calc,
@@ -538,13 +539,10 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 
 \section{Performance}\label{sec:performance}
 
-It's fast :)
-
 \begin{figure}[h]
 \input{./benchmarks/results/avx2_rayon.pgf}
-\caption{Throughput for different input lengths on Intel Kaby Lake with AVX2
-    and 4 physical cores, with Turbo Boost disabled. This is a multi-threaded
-    implementation of BLAKE3.}
+\caption{Throughput for a multi-threaded implementation of BLAKE3 at various
+    input lengths on an Intel Kaby Lake processor.}
 \label{fig:avx2_rayon}
 \end{figure}
 
@@ -553,16 +551,68 @@ It's fast :)
 % proper AVX-512 implementation of BLAKE2, using the new rotation instructions.
 \begin{figure}[h]
 \input{./benchmarks/results/avx512_detect_c.pgf}
-\caption{Throughput for different input lengths on Intel Skylake-SP with
-    AVX-512. This is a single-threaded implementation of BLAKE3.}
+\caption{Throughput for a single-threaded implementation of BLAKE3 at various
+    input lengths on an Intel Skylake-SP processor.}
 \label{fig:avx512_c}
 \end{figure}
 
 \begin{figure}[h]
 \input{./benchmarks/results/rpizero.pgf}
-\caption{Throughput for different input lengths on ARM Cortex-M0.}
+    \caption{Throughput at various input lengths on an ARM Cortex-M0
+    processor.}
 \label{fig:rpizero}
 \end{figure}
+
+Several factors contribute to the performance of BLAKE3, depending on the
+platform and the size of the input:
+
+\begin{itemize}
+    \item The tree structure allows an implementation to compress multiple
+        chunks in parallel using SIMD (cf.~\S\ref{sec:simd}). With enough
+        input, this can occupy SIMD vectors of any width.
+    \item The tree structure allows an implementation to use multiple threads.
+        With enough input, this can occupy any number of cores.
+    \item The compression function uses fewer rounds than in BLAKE2.
+    \item The compression function performs well on smaller architectures.
+\end{itemize}
+
+Figure~\ref{fig:avx2_rayon} shows the throughput of a multi-threaded
+implementation of BLAKE3 on a typical laptop computer. This benchmark ran on an
+Intel Kaby Lake i5-8250U processor with 4 physical cores, supporting 256-bit
+AVX2 vector instructions, and with Turbo Boost disabled. In this setting, the
+implementation remains single-threaded for inputs up to 16~KiB. Parallel
+compression using SIMD begins with 8~KiB inputs using 128-bit vectors, and with
+16~KiB inputs using 256-bit vectors. The implementation begins multi-threading
+with 32~KiB inputs, in this case causing a performance drop. (An implementation
+tuned for this specific platform would forgo multi-threading for inputs shorter
+than e.g.\ 128~KiB.) Peak throughput occurs at 4~MiB of input, at which point
+BLAKE3 is $5\times$ faster than BLAKE2bp and BLAKE2sp and an order of magnitude
+faster than BLAKE2b, BLAKE2s, SHA-2, and SHA-3.
+
+Figure~\ref{fig:avx512_c} shows the throughput of a single-threaded
+implementation of BLAKE3 on modern server hardware. This benchmark ran on an
+AWS t3.nano instance with an Intel Skylake-SP 8175M processor, supporting
+AVX-512 vector instructions. Here, BLAKE3 is the only algorithm able to take
+advantage of 512-bit vector arithmetic. (Note that the KangarooTwelve
+algorithm, not included in this benchmark, can also use 512-bit vectors.) The
+fixed tree structures of BLAKE2bp and BLAKE2sp limit those algorithms to
+256-bit vectors.
+
+Figure~\ref{fig:rpizero} shows the throughput of BLAKE3 on a smaller embedded
+platform. This benchmark ran on an ARM Cortex-M0 processor, without multiple
+cores or SIMD support. Here, BLAKE2b, SHA-512, and SHA-3 perform relatively
+poorly, because their compression functions require 64-bit arithmetic. BLAKE3
+and BLAKE2s have similar performance profiles here, and the BLAKE3 compression
+function uses fewer rounds.
+
+Figures \ref{fig:avx2_rayon}, \ref{fig:avx512_c}, and \ref{fig:rpizero} also
+highlight that BLAKE3 performs well for short inputs. The fixed tree structures
+of BLAKE2bp and BLAKE2sp are costly when the input is short, because they
+always compress a parent node and a fixed number of leaves. The advantage of
+their fixed tree structures, however, comes at medium input lengths around
+1-4~KiB, where BLAKE3 does not yet have enough chunks to operate in parallel.
+This is the regime where BLAKE2bp and BLAKE2sp pull ahead of BLAKE3 in figures
+\ref{fig:avx2_rayon} and \ref{fig:avx512_c}.
 
 \section{Security}\label{sec:security}
 
