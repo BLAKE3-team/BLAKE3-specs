@@ -405,10 +405,11 @@ the last chunk, which may be short.
 \texttt{CHUNK\_START} flag (cf. Table~\ref{tab:flags}), and the last block of each chunk sets the
 \texttt{CHUNK\_END} flag. If a chunk contains only one block, that block sets
 both \texttt{CHUNK\_START} and \texttt{CHUNK\_END}. If a chunk is the root of
-its tree, the last block of that chunk also sets the \texttt{ROOT} flag. The
-output of the compression function for the last block in a chunk is the
-chaining value of that chunk.
+its tree, the last block of that chunk also sets the \texttt{ROOT} flag.
 \end{itemize}
+
+The output of the truncated compression function for the last block in a chunk
+is the chaining value of that chunk.
 
 \begin{figure}
 \centering
@@ -503,13 +504,13 @@ fullcomp/.style={draw, rectangle, minimum height=1.5cm, minimum width=0.75cm, tr
 Each parent node has exactly two children, each either a chunk or another
 parent node. The chaining value of each parent node is given by a single call
 to the compression function. The input chaining value $h_{0} \ldots h_{7}$ is
-the key words $k_{0} \ldots k_{7}$. The message words $m_{0} \ldots m_{15}$ are
-the concatenated chaining values of the two children, first the left then the
-right. The offset $t$ for parent nodes is always 0. The number of bytes $b$ for
-parent nodes is always 64. Parent nodes set the \texttt{PARENT} flag. If a
-parent node is the root of the tree, it also sets the \texttt{ROOT} flag. The
-first 8 words of the output of the compression function is the chaining value
-of the parent node.
+the key words $k_{0} \ldots k_{7}$. The message words $m_{0} \ldots m_{7}$ are
+the chaining value of the left child, and the message words $m_{8} \ldots
+m_{15}$ are the chaining value of the right child. The offset $t$ for parent
+nodes is always 0. The number of bytes $b$ for parent nodes is always 64.
+Parent nodes set the \texttt{PARENT} flag. If a parent node is the root of the
+tree, it also sets the \texttt{ROOT} flag. The output of the truncated
+compression function is the chaining value of the parent node.
 
 \subsection{Extendable Output}\label{sec:extendable}
 
