@@ -1,6 +1,6 @@
 Run `cargo bench` to execute these benchmarks yourself.
 
-To cross-compile benchmarks for ARM Cortex-M0, follow these steps:
+To cross-compile benchmarks for ARMv6, follow these steps:
 
 ```
 git clone https://github.com/raspberrypi/tools /tmp/rpi_tools
@@ -15,6 +15,6 @@ with the `--bench` flag. Benchmark results will be written to
 `./target/criterion/bench_group`.
 
 Note that the `blake2b_simd` crate used here sets the
-`uninline_portable` flag, which improves BLAKE2b performance on ARM
-Cortex-M0. If you run benchmarks on larger ARM processors or other
-non-x86, you might want to disable that feature.
+`uninline_portable` flag, which improves BLAKE2b performance on the
+Raspberry Pi Zero. If you run benchmarks on larger ARM processors or
+other non-x86, you might want to disable that feature.
