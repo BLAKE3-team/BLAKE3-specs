@@ -98,12 +98,6 @@ fn words_from_litte_endian_bytes(bytes: &[u8], words: &mut [u32]) {
     }
 }
 
-fn little_endian_bytes_from_words(words: &[u32], bytes: &mut [u8]) {
-    for (word, bytes_block) in words.iter().zip(bytes.chunks_exact_mut(4)) {
-        bytes_block.copy_from_slice(&word.to_le_bytes());
-    }
-}
-
 // Each chunk or parent node can produce either an 8-word chaining value or, by
 // setting the ROOT flag, any number of final output bytes. The Output struct
 // captures the state just prior to choosing between those two possibilities.
@@ -127,7 +121,7 @@ impl Output {
     }
 
     fn root_output_bytes(&self, out_slice: &mut [u8]) {
-        let mut offset = self.offset;
+        let mut offset = 0;
         for out_block in out_slice.chunks_mut(2 * OUT_LEN) {
             let words = compress(
                 &self.input_chaining_value,
@@ -136,7 +130,10 @@ impl Output {
                 self.block_len,
                 self.flags | ROOT,
             );
-            little_endian_bytes_from_words(&words, out_block);
+            // The output length might not be a multiple of 4.
+            for (word, out_word) in words.iter().zip(out_block.chunks_mut(4)) {
+                out_word.copy_from_slice(&word.to_le_bytes()[..out_word.len()]);
+            }
             offset += 2 * OUT_LEN as u64;
         }
     }
