@@ -62,6 +62,8 @@
   shapes.geometric,
   arrows
 }
+\usepackage{pgfplots}
+\pgfplotsset{compat=newest}
 
 \definecolor{darkred}{RGB}{170,0,0}
 \definecolor{darkblue}{RGB}{0,0,170}
@@ -541,7 +543,9 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 \section{Performance}\label{sec:performance}
 
 \begin{figure}[h]
-\input{./benchmarks/results/avx2_rayon.pgf}
+\centering
+%\input{./benchmarks/results/avx2_rayon.pgf}
+\input{./benchmarks/results/avx2_rayon.tikz}
 \caption{Throughput for a multi-threaded implementation of BLAKE3 at various
     input lengths on an Intel Kaby Lake processor.}
 \label{fig:avx2_rayon}
@@ -551,16 +555,19 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 % implementation of BLAKE2, making BLAKE2 look worse than it should. We need a
 % proper AVX-512 implementation of BLAKE2, using the new rotation instructions.
 \begin{figure}[h]
-\input{./benchmarks/results/avx512_detect_c.pgf}
+\centering
+%\input{./benchmarks/results/avx512_detect_c.pgf}
+\input{./benchmarks/results/avx512_detect_c.tikz}
 \caption{Throughput for a single-threaded implementation of BLAKE3 at various
-    input lengths on an Intel Skylake-SP processor.}
+    input lengths on an Intel Skylake-SP processor.}%
 \label{fig:avx512_c}
 \end{figure}
 
 \begin{figure}[h]
-\input{./benchmarks/results/rpizero.pgf}
-    \caption{Throughput at various input lengths on an ARM Cortex-M0
-    processor.}
+\centering
+%\input{./benchmarks/results/rpizero.pgf}
+\input{./benchmarks/results/rpizero.tikz}
+\caption{Throughput at various input lengths on an ARM Cortex-M0 processor.}%
 \label{fig:rpizero}
 \end{figure}
 
