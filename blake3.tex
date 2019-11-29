@@ -599,12 +599,12 @@ faster than BLAKE2b, BLAKE2s, SHA-2, and SHA-3.
 
 Figure~\ref{fig:avx512_c} shows the throughput of a single-threaded
 implementation of BLAKE3 on modern server hardware. This benchmark ran on an
-AWS t3.nano instance with an Intel Skylake-SP 8175M processor, supporting
-AVX-512 vector instructions. Here, BLAKE3 is the only algorithm able to take
-advantage of 512-bit vector arithmetic. (Note that the KangarooTwelve
-algorithm, not included in this benchmark, can also use 512-bit vectors.) The
-fixed tree structures of BLAKE2bp and BLAKE2sp limit those algorithms to
-256-bit vectors.
+AWS c5.metal instance with an Intel Skylake-SP 8175M processor, supporting
+AVX-512 vector instructions, and with Turbo Boost disabled. Here, BLAKE3 is the
+only algorithm able to take advantage of 512-bit vector arithmetic. (Note that
+the KangarooTwelve algorithm, not included in this benchmark, can also use
+512-bit vectors.) The fixed tree structures of BLAKE2bp and BLAKE2sp limit
+those algorithms to 256-bit vectors.
 
 Figure~\ref{fig:rpizero} shows the throughput of BLAKE3 on a smaller embedded
 platform. This benchmark ran on a Raspberry Pi Zero with a 32-bit ARM1176
