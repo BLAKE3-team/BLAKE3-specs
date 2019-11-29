@@ -2,7 +2,7 @@
 \begin{axis}[
     width=0.9\textwidth,
 	height=10cm,
-	legend style={at={(0.02,0.98)}, anchor=north west, font=\small, cells={anchor=west}},
+	legend style={at={(0.98,0.02)}, anchor=south east, font=\small, cells={anchor=west}},
 	axis x line=bottom,
 	axis y line=left,
 	cycle multi list={
