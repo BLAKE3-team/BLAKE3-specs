@@ -51,7 +51,7 @@
 \usepackage{listings}
 \usepackage{tikz}
 \usepackage[shortcuts]{extdash} % unbreakable dashes, e.g. SHA\=/2
-% \usepackage[outputdir=build]{minted} % syntax highlighting using Pygments
+\usepackage[outputdir=build]{minted} % syntax highlighting using Pygments
 \usepackage[title]{appendix} % add "Appendix" to each appendix section title
 \usepackage[font=small,labelfont=bf]{caption}
 \usetikzlibrary
@@ -626,36 +626,155 @@ This is the regime where BLAKE2bp and BLAKE2sp pull ahead of BLAKE3 in figures
 
 It's safe :)
 
-\section{Memory Requirement}\label{sec:memory}
-
-BLAKE3 has a larger memory requirement than BLAKE2. An incremental
-implementation needs to store a 32-byte chaining value for every level of the
-tree below the root. The maximum input size is $2^{64}-1$ bytes, and the chunk
-size is $2^{11}$ bytes, giving a maximum tree depth of $64 - 11 = 53$. The
-stack of chaining values thus requires $53 \cdot 32 = 1696$ bytes. The
-incremental state of the current chunk also requires at least 104 bytes for the
-chaining value, the message block, and the chunk offset. The total size of the
-reference implementation is 1848 bytes.
-
-For comparison, BLAKE2s has a memory footprint similar to the BLAKE3 chunk
-state alone, at least 104 bytes. BLAKE2b has twice the chaining value size and
-block size, requiring at least 200 bytes. And the parallel modes BLAKE2bp and
-BLAKE2sp both require at least 776 bytes.
-
-Space-constrained implementations of BLAKE3 can save space by restricting the
-maximum input size. For example, the maximum size of an IPv6 "jumbogram" is
-$2^{32}-1$ bytes, or just under 4~GiB. At this size, the tree depth is 21 and
-the chaining value stack is $21 \cdot 32 = 672$ bytes. For another example, the
-maximum size of a TLS record is $2^{14}$ bytes, or exactly 16~KiB. At this
-size, the tree depth is 3 and the chaining value stack is $3 \cdot 32 = 96$
-bytes.
-
 \section{Implementation}\label{sec:implementation}
 
 \subsection{Incremental Hashing}\label{sec:incremental}
 
-How to merge subtrees, using that trick with counting 1 bits. Include a pretty
-diagram.
+An incremental implementation of BLAKE3 needs two major components: the state
+of the current chunk and a stack of subtree chaining values (the "CV stack").
+The chunk state is structurally simliar to an incremental implementation of the
+sequential mode of BLAKE2. Simplifying the management of the CV stack is
+especially important for a concise and correct implementation of BLAKE3. This
+section is best read together with the code of the reference implementation.
+[LINK TO REFERENCE IMPLEMENTATION HERE.]
+
+\subsubsection{Chunk State}\label{sec:chunkstate}
+
+The chunk state contains the 32-byte CV of the previous block and a 64-byte
+input buffer for the next block, and typically also the compression function
+parameters $t$ and $d$. Input bytes from the caller are copied into the buffer
+until it is full. Then the buffer is compressed together with the previous CV,
+using the truncated compression function. The output CV overwrites the previous
+CV, and the buffer is cleared. An important detail here is that the last block
+of a chunk is compressed differently, setting the \texttt{CHUNK\_END} flag and
+possibly the \texttt{ROOT} flag. In an incremental setting, any block could
+potentially be the last, until the caller has supplied enough input to place at
+least 1 byte in the block after. For that reason, the chunk state waits to
+compress the next block until both the buffer is full and the caller has
+supplied more input. Note that the CV stack takes the same approach immediately
+below: chunk CVs are added to the stack only after the caller supplies at least
+1 bytes for for the following chunk.
+
+\subsubsection{Chaining Value Stack}\label{sec:cvstack}
+
+To help picture the role of the CV stack, Figure~\ref{fig:incrementaltrees}
+shows a growing tree as chunk CVs are added incrementally. As just discussed
+above, chunk CVs are added only after the caller has supplied at least 1 byte
+for the following chunk, so we know that these chunks and parent nodes are not
+the root of the tree, and we do not need to worry about the \texttt{ROOT} flag
+yet. When the first chunk CV is added, $c_0$, it is alone. When the second
+chunk CV is added, $c_1$, it completes a subtree of size 2, and the first
+parent CV can be computed, $p_0$. The third chunk CV, $c_2$, does not complete
+any subtrees. The fourth chunk CV, $c_3$, completes two subtrees, one of size 2
+and one of size 4. First it joins with $c_2$ giving a new parent CV, $p_1$.
+Then $p_1$ joins with $p_0$, giving $p_2$.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}
+
+\node[draw,rectangle] (chunk1) at (0, 0) {$c_0$};
+
+%%
+
+\node[draw,rectangle,right=1.5cm of chunk1,dotted] (chunk2) {$c_0$};
+\node[draw,rectangle,right=0.5cm of chunk2,dotted] (chunk3) {$c_1$};
+\node[draw,rectangle,above=1cm of chunk2] (parent1) at ($(chunk2)!0.5!(chunk3)$) {$p_0$};
+\draw[-latex] (chunk2) -- (parent1);
+\draw[-latex] (chunk3) -- (parent1);
+
+%%
+
+\node[draw,rectangle,right=1.5cm of chunk3,dotted] (chunk2) {$c_0$};
+\node[draw,rectangle,right=0.5cm of chunk2,dotted] (chunk3) {$c_1$};
+\node[draw,rectangle,above=1cm of chunk2] (parent1) at ($(chunk2)!0.5!(chunk3)$) {$p_0$};
+\node[draw,rectangle,right=0.5cm of chunk3] (chunk4) {$c_2$};
+\draw[-latex] (chunk2) -- (parent1);
+\draw[-latex] (chunk3) -- (parent1);
+
+%%
+
+\node[draw,rectangle,right=1.5cm of chunk4,dotted] (chunk2) {$c_0$};
+\node[draw,rectangle,right=0.5cm of chunk2,dotted] (chunk3) {$c_1$};
+\node[draw,rectangle,above=1cm of chunk2,dotted] (parent1) at ($(chunk2)!0.5!(chunk3)$) {$p_0$};
+\node[draw,rectangle,right=0.5cm of chunk3,dotted] (chunk4) {$c_2$};
+\node[draw,rectangle,right=0.5cm of chunk4,dotted] (chunk5) {$c_3$};
+\node[draw,rectangle,above=1cm of chunk4,dotted] (parent2) at ($(chunk4)!0.5!(chunk5)$) {$p_1$};
+\node[draw,rectangle,above=1cm of parent2] (parent3) at ($(parent1)!0.5!(parent2)$) {$p_2$};
+\draw[-latex] (chunk2) -- (parent1);
+\draw[-latex] (chunk3) -- (parent1);
+\draw[-latex] (chunk4) -- (parent2);
+\draw[-latex] (chunk5) -- (parent2);
+\draw[-latex] (parent1) -- (parent3);
+\draw[-latex] (parent2) -- (parent3);
+
+\end{tikzpicture}
+\caption{An example of a tree growing incrementally from 1 to 4 chunks. Dotted
+    boxes represent CVs that no longer need to be stored.}
+\label{fig:incrementaltrees}
+\end{figure}
+
+Note that once a subtree is complete, none of its child CVs need to be stored
+any longer. The CVs that we still need are stored in the CV stack. We can look
+through Figure~\ref{fig:incrementaltrees} again, this time focusing on the
+solid and dotted boxes, with dotted boxes representing the CVs that no longer
+need to be stored. When $c_0$ is alone, it is the only entry in the CV stack.
+When $c_1$ is added, $c_0$ is removed from the stack and merged into $p_0$, and
+$p_0$ becomes the only entry. When $c_2$ is added, both $p_0$ and $c_2$ remain
+in the stack. When $c_3$ is added, $c_2$ and $p_0$ are both removed and merged
+into $p_2$, and $p_2$ is the only entry that remains. In this sense, $c_1$,
+$c_3$, and $p_1$ are never directly stored in the stack.
+
+Thus the key question for managing the CV stack is, when a new chunk CV is
+added, how many subtrees does it complete? Which is to say, how many CVs should
+we pop off the stack and merge with it first?
+
+To answer that question, note the following invariant. At each step, the number
+of CVs remaining in the stack is the same as the number of 1 bits in the binary
+representation of the total number of chunks so far. With one chunk in the tree
+(0b001), the stack contains one CV. With two chunks in the tree (0b010), the
+stack still contains one CV. With three chunks in the tree (0b011), the stack
+now contains two CVs. And with four chunks in the tree (0b100), the stack once
+again contains one CV. When we eventually reach seven chunks (0b111), the stack
+will contain three CVs.
+
+This invariant leads to an algorithm for adding chunk CVs to the stack:
+Continue popping CVs off the stack to form new parent nodes, as long as the
+number of entries in the stack is greater than or equal to the number of 1 bits
+in the new total number of chunks.
+Listing~\ref{listing:push_chunk_chaining_value} shows this algorithm as it
+appears in the Rust reference implementation.
+
+\begin{listing}[h]
+\begin{minted}{rust}
+fn push_chunk_chaining_value(&mut self, mut cv: [u32; 8], total_bytes: u64) {
+    // The new chunk chaining value might complete some subtrees along the
+    // right edge of the growing tree. For each completed subtree, pop its
+    // left child CV off the stack and compress a new parent CV. After as
+    // many parent compressions as possible, push the new CV onto the
+    // stack. The final length of the stack will be the count of 1 bits in
+    // the total number of chunks or (equivalently) input bytes so far.
+    let final_stack_len = total_bytes.count_ones() as u8;
+    while self.subtree_stack_len >= final_stack_len {
+        cv = parent_output(&self.pop_stack(), &cv, &self.key, self.chunk_state.flags)
+            .chaining_value();
+    }
+    self.push_stack(&cv);
+}
+\end{minted}
+\caption{The algorithm in the Rust reference implementation that manages the
+    chaining value stack when a new chunk CV is added.}
+\label{listing:push_chunk_chaining_value}
+\end{listing}
+
+Once the caller indicates that the input is complete, the current chunk is
+finalized, and the new chunk CV is merged with each entry in the CV stack from
+top to bottom. This happens regardless of the number of chunks so far,
+reflecting the fact that subtrees along the right edge of the tree may be
+incomplete. The last parent node compression in this case sets the
+\texttt{ROOT} flag. Or if there are no CVs in the stack, and thus no parent
+nodes to compress, finalization of the last (and only) chunk sets the
+\texttt{ROOT} flag.
 
 \subsection{Multi-threading}\label{sec:multithreading}
 
@@ -663,16 +782,16 @@ Most of the work of computing a BLAKE3 hash is compressing chunks. Each chunk
 can be compressed independently, and one approach to multi-threading is to farm
 out individual chunks or groups of chunks to tasks on a thread pool. In this
 approach, a leader thread owns the chaining value stack
-(cf.~\S\ref{sec:incremental}) and awaits a CV from each task in order.
+(cf.~\S\ref{sec:cvstack}) and awaits a CV from each task in order.
 
 This leader-workers approach has some inefficiencies. Spawning tasks and
 creating channels usually require heap allocation, which is a performance cost
 that needs to be amortized over larger groups of chunks. At high degrees of
-parallelism, managing the CV stack can also become a bottleneck.
+parallelism, managing the CV stack itself can become a bottleneck.
 
 A more efficient approach to multi-threading is based on a recursive tree
 traversal. The input is split into left and right parts. As per the rules in
-Section~\ref{sec:tree}, the left part receives the largest power-of-2 number of
+\S\ref{sec:tree}, the left part receives the largest power-of-2 number of
 chunks that leaves at least 1 byte for the right part. Each part then repeats
 this splitting step recursively, until the parts are chunk-sized, and each
 chunk is compressed into a CV. On the way back up the callstack, each pair of
@@ -689,15 +808,15 @@ The recursive approach is simplest when the entire input is available at once,
 since no CV stack is needed. In an incremental setting, a hybrid approach is
 also possible. A large buffer of input can be compressed recursively into a
 single subtree CV, and that CV can be pushed onto the CV stack using the same
-procedure as a chunk CV. If each incremental input is a fixed power-of-2 number
-of chunks in size (for example if all input is copied into an internal buffer
-before compression), the push procedure works with no modification. If each
-input is a variable size (for example if input from the caller is compressed
-directly without copying), the implementation needs to maintain the
-largest-to-smallest ordering invariant of the CV stack. The size of each
-subtree being compressed must evenly divide the total input bytes received so
-far, and the implementation might need to break up the caller's input into
-separate pieces.
+algorithm as in \S\ref{sec:cvstack}. If each incremental input is a fixed
+power-of-2 number of chunks in size (for example if all input is copied into an
+internal buffer before compression), the push algorithm works with no
+modification. If each input is a variable size (for example if input from the
+caller is compressed directly without copying), the implementation needs to
+maintain the largest-to-smallest ordering invariant of the CV stack. The size
+of each subtree being compressed must evenly divide the total number of input
+bytes received so far, and the implementation might need to break up the
+caller's input into separate pieces.
 
 \subsection{SIMD}\label{sec:simd}
 
@@ -731,10 +850,36 @@ across all of the states, and no diagonalization step is required. When enough
 input is available, this approach is much more efficient than the first
 approach. It also scales to wider instruction sets like AVX2 and AVX-512.
 
-The second approach can be combined with either of the multi-threading
-strategies from Section~\ref{sec:multithreading}. Rather than each task
-compressing one chunk at a time, each task can compress multiple chunks in
-parallel.
+The second approach can be integrated with the CV stack algorithm from
+\S\ref{sec:cvstack} by computing multiple chunk CVs in parallel and then
+pushing each of them into the CV stack one at a time. It can also be combined
+with either of the multi-threading strategies from \S\ref{sec:multithreading}.
+Rather than having each task or recursive leaf compress one chunk at a time,
+each can compress multiple chunks in parallel.
+
+\section{Memory Requirement}\label{sec:memory}
+
+BLAKE3 has a larger memory requirement than BLAKE2, because of the chaining
+value stack described in \S\ref{sec:cvstack}. An incremental implementation
+needs space for a 32-byte chaining value for every level of the tree below the
+root. The maximum input size is $2^{64}-1$ bytes, and the chunk size is
+$2^{11}$ bytes, giving a maximum tree depth of $64 - 11 = 53$. The CV stack
+thus requires $53 \cdot 32 = 1696$ bytes. The chunk state
+(cf.~\S\ref{sec:chunkstate}) also requires at least 104 bytes for the chaining
+value, the message block, and the chunk offset. The size of the reference
+implementation is 1848 bytes on the callstack.
+
+For comparison, BLAKE2s has a memory footprint similar to the BLAKE3 chunk
+state alone, at least 104 bytes. BLAKE2b has twice the chaining value size and
+block size, requiring at least 200 bytes. And the parallel modes BLAKE2bp and
+BLAKE2sp both require at least 776 bytes.
+
+Space-constrained implementations of BLAKE3 can save space by restricting the
+maximum input size. For example, the maximum size of an IPv6 "jumbogram" is
+$2^{32}-1$ bytes, or just under 4~GiB. At this size, the tree depth is 21 and
+the CV stack is $21 \cdot 32 = 672$ bytes. For another example, the maximum
+size of a TLS record is $2^{14}$ bytes, or exactly 16~KiB. At this size, the
+tree depth is 3 and the CV stack is $3 \cdot 32 = 96$ bytes.
 
 \section{Applications}\label{sec:applications}
 
