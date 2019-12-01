@@ -652,6 +652,53 @@ bytes.
 
 \section{Implementation}\label{sec:implementation}
 
+\subsection{Incremental Hashing}\label{sec:incremental}
+
+How to merge subtrees, using that trick with counting 1 bits. Include a pretty
+diagram.
+
+\subsection{Multi-threading}\label{sec:multithreading}
+
+Most of the work of computing a BLAKE3 hash is compressing chunks. Each chunk
+can be compressed independently, and one approach to multi-threading is to farm
+out individual chunks or groups of chunks to tasks on a thread pool. In this
+approach, a leader thread owns the chaining value stack
+(cf.~\S\ref{sec:incremental}) and awaits a CV from each task in order.
+
+This leader-workers approach has some inefficiencies. Spawning tasks and
+creating channels usually require heap allocation, which is a performance cost
+that needs to be amortized over larger groups of chunks. At high degrees of
+parallelism, managing the CV stack can also become a bottleneck.
+
+A more efficient approach to multi-threading is based on a recursive tree
+traversal. The input is split into left and right parts. As per the rules in
+Section~\ref{sec:tree}, the left part receives the largest power-of-2 number of
+chunks that leaves at least 1 byte for the right part. Each part then repeats
+this splitting step recursively, until the parts are chunk-sized, and each
+chunk is compressed into a CV. On the way back up the callstack, each pair of
+left and right child CVs is compressed into a parent CV.
+
+This recursive approach fits well into a fork-join concurrency model, like
+those provided by OpenMP, Cilk, and Rayon (Rust). Each left and right part
+becomes a separate task, and a work-stealing runtime parallelizes those tasks
+across however many threads are available. This can work without heap
+allocation, because the runtime can make a fixed-size stack allocation at each
+recursive callsite.
+
+The recursive approach is simplest when the entire input is available at once,
+since no CV stack is needed. In an incremental setting, a hybrid approach is
+also possible. A large buffer of input can be compressed recursively into a
+single subtree CV, and that CV can be pushed onto the CV stack using the same
+procedure as a chunk CV. If each incremental input is a fixed power-of-2 number
+of chunks in size (for example if all input is copied into an internal buffer
+before compression), the push procedure works with no modification. If each
+input is a variable size (for example if input from the caller is compressed
+directly without copying), the implementation needs to maintain the
+largest-to-smallest ordering invariant of the CV stack. The size of each
+subtree being compressed must evenly divide the total input bytes received so
+far, and the implementation might need to break up the caller's input into
+separate pieces.
+
 \subsection{SIMD}\label{sec:simd}
 
 There are two approaches to using SIMD in a BLAKE3 implementation, and both are
@@ -684,14 +731,10 @@ across all of the states, and no diagonalization step is required. When enough
 input is available, this approach is much more efficient than the first
 approach. It also scales to wider instruction sets like AVX2 and AVX-512.
 
-\subsection{Multi-threading}\label{sec:multithreading}
-
-Using e.g. Rayon without memory allocation.
-
-\subsection{Incremental Hashing}\label{sec:incremental}
-
-How to merge subtrees, using that trick with counting 1 bits. Include a pretty
-diagram.
+The second approach can be combined with either of the multi-threading
+strategies from Section~\ref{sec:multithreading}. Rather than each task
+compressing one chunk at a time, each task can compress multiple chunks in
+parallel.
 
 \section{Applications}\label{sec:applications}
 
