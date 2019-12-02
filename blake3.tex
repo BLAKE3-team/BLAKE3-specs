@@ -77,6 +77,8 @@
 \newcommand{\lto}{\leftarrow}
 \newcommand{\BB}{\mathsf{B2}}
 
+\newcommand{\alert}[1]{\textcolor{red}{#1}}
+
 \title{BLAKE3}
 
 \begin{document}
@@ -618,20 +620,55 @@ highlight that BLAKE3 performs well for short inputs. The fixed tree structures
 of BLAKE2bp and BLAKE2sp are costly when the input is short, because they
 always compress a parent node and a fixed number of leaves. The advantage of
 their fixed tree structures, however, comes at medium input lengths around
-1-4~KiB, where BLAKE3 does not yet have enough chunks to operate in parallel.
+1--4\,KiB, where BLAKE3 does not yet have enough chunks to operate in parallel.
 This is the regime where BLAKE2bp and BLAKE2sp pull ahead of BLAKE3 in figures
 \ref{fig:avx2_rayon} and \ref{fig:avx512_c}.
 
 \section{Security}\label{sec:security}
 
-It's safe :)
+BLAKE3 targets $128$-bit security for all of its security goals. That is, $128$-bit security against (second-)preimage, collision, or differentiability attacks.
+
+The key length is nevertheless $256$ bits, which is useful against multi-target or possible certificational attacks.
+
+Users who need $256$-bit security can remain using BLAKE2.
+
+\subsection{Mode of Operation}\label{sec:mode}
+
+Indifferentiability / tree soundness stuff here~\cite{DBLP:journals/ijisec/BertoniDPA14,DBLP:journals/tosc/LuykxMN16,DBLP:journals/tosc/DaemenMA18}.
+
+\subsection{Cryptanalysis}\label{sec:cryptanalysis}
+
+The rather aggressive round reduction from 10 to 7 rounds is based on existent cryptanalysis, along with novel research.
+
+\begin{itemize}
+  \item Cryptanalysis of BLAKE~\cite{DBLP:conf/cans/SuWWD10,DBLP:journals/ipl/VidaliNP10,DBLP:journals/iet-ifs/BaiYWW15,DBLP:conf/fse/AumassonGKMM10,DBLP:journals/iacr/JiL09,DK11,DBLP:conf/fse/BiryukovNR11}
+  \item Cryptanalysis of BLAKE2~\cite{DBLP:conf/ctrsa/0001KNWW14,DBLP:conf/cisc/Hao14,DBLP:conf/crypto/EspitauFK15}
+  \item Table~\ref{tab:trails} shows that the initialization of BLAKE2/3, by restricting inputs, makes things harder for the attacker, with probabilities getting very low very quickly. As also observed in~\cite[\S7]{DBLP:conf/ctrsa/0001KNWW14}. 
+  \item The boomerang attacks of, e.g., \cite{DBLP:conf/cisc/Hao14,DBLP:conf/fse/BiryukovNR11,DBLP:journals/iet-ifs/BaiYWW15} exploit the high probabilities on the first few rounds to connect two trails and get through a few more rounds. This is a usual trick to get around the very quick lowering of probabilities in ARX constructs, along with differential-linear attacks. But such attacks do not present a threat to BLAKE3, considering its $128$-bit security target, and input restrictions on the compression function input (i.e., the IV).
+\end{itemize}
+
+\begin{table}
+\centering
+\caption{Best differential trail probabilities for increasing round numbers of the compression functions of BLAKE-256, BLAKE2s, and BLAKE3, respecting their constraints on inputs to the keyed permutation.}%
+\label{tab:trails}
+\begin{tabular}{lccccccc}
+  \toprule
+  Compression function & 0.5   & 1     & 1.5   & 2     & 2.5   & 3     & 3.5 \\ \midrule
+  BLAKE-256 & $2^{-0}$ & $2^{-0}$ & $2^{-0}$ & $2^{-1}$ & $2^{-6}$ & $2^{-7}$ & $2^{-38}?$  \\
+  BLAKE\{2s,3\}   &  $2^{-0}$  & $2^{-0}$ &  $2^{-0}$  & $2^{-1}$ & $2^{-32}$   & $2^{-88} \le p<2^{-48}$ & $<2^{-48}$  \\
+  BLAKE\{-256,2s,3\} (key only) & $2^{-0}$ & $2^{-1}$ & $2^{-32}$ & - & - & - & -  \\
+  BLAKE-256 (message only) & $2^{-0}$ & $2^{-2}$ & $2^{-12}$ & $2^{-39}?$ & - & - & - \\
+  BLAKE\{2s,3\} (message only) & $2^{-0}$ & $2^{-7}$ & $2^{-32}$ & - & - & - & - \\
+  \bottomrule
+\end{tabular}
+\end{table}
 
 \section{Implementation}\label{sec:implementation}
 
 \subsection{Incremental Hashing}\label{sec:incremental}
 
 An incremental implementation of BLAKE3 needs two major components: the state
-of the current chunk and a stack of subtree chaining values (the "CV stack").
+of the current chunk and a stack of subtree chaining values (the ``CV stack'').
 The chunk state is structurally simliar to an incremental implementation of the
 sequential mode of BLAKE2. Simplifying the management of the CV stack is
 especially important for a concise and correct implementation of BLAKE3. This
@@ -850,6 +887,8 @@ across all of the states, and no diagonalization step is required. When enough
 input is available, this approach is much more efficient than the first
 approach. It also scales to wider instruction sets like AVX2 and AVX-512.
 
+\alert{For SIMD implementations with multiple 128-bit lanes, such as AVX2 and AVX-512, there is a 3rd approach that simply replicates the first approach without transposing the state / message. This might be advantageous in some short-message regimes to be determined.}
+
 The second approach can be integrated with the CV stack algorithm from
 \S\ref{sec:cvstack} by computing multiple chunk CVs in parallel and then
 pushing each of them into the CV stack one at a time. It can also be combined
@@ -875,7 +914,7 @@ block size, requiring at least 200 bytes. And the parallel modes BLAKE2bp and
 BLAKE2sp both require at least 776 bytes.
 
 Space-constrained implementations of BLAKE3 can save space by restricting the
-maximum input size. For example, the maximum size of an IPv6 "jumbogram" is
+maximum input size. For example, the maximum size of an IPv6 ``jumbogram'' is
 $2^{32}-1$ bytes, or just under 4~GiB. At this size, the tree depth is 21 and
 the CV stack is $21 \cdot 32 = 672$ bytes. For another example, the maximum
 size of a TLS record is $2^{14}$ bytes, or exactly 16~KiB. At this size, the
@@ -929,11 +968,11 @@ Giant disk images.
 
 \section{Rationales}\label{sec:rationales}
 
-\nocite{*}
+%\nocite{*}
 \bibliographystyle{plainurl}
 \bibliography{blake3}
 
-[These references are placeholders. TODO.]
+% [These references are placeholders. TODO.]
 
 \begin{appendices}
 
