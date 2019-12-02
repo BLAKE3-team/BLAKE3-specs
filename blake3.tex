@@ -678,16 +678,16 @@ See~\cite{TMC}.
 
 \begin{table}
 \centering
-\caption{Best differential trail probabilities for increasing round numbers of the compression functions of BLAKE-256, BLAKE2s, and BLAKE3, respecting their constraints on inputs to the keyed permutation.}%
+\caption{Best differential trail probabilities for increasing round numbers of the compression functions of BLAKE-256, BLAKE2s, and BLAKE3, respecting their constraints on inputs to the keyed permutation. Probabilities marked with ${}^\ast$ indicate symmetric differences were sought exclusively.}%
 \label{tab:trails}
 \begin{tabular}{lccccccc}
   \toprule
-  Compression function & 0.5   & 1     & 1.5   & 2     & 2.5   & 3     & 3.5 \\ \midrule
-  BLAKE-256 & $2^{-0}$ & $2^{-0}$ & $2^{-0}$ & $2^{-1}$ & $2^{-6}$ & $2^{-7}$ & $2^{-38}?$  \\
-  BLAKE\{2s,3\}   &  $2^{-0}$  & $2^{-0}$ &  $2^{-0}$  & $2^{-1}$ & $2^{-32}$   & $2^{-88} \le p<2^{-48}$ & $<2^{-48}$  \\
-  BLAKE\{-256,2s,3\} (key only) & $2^{-0}$ & $2^{-1}$ & $2^{-32}$ & - & - & - & -  \\
-  BLAKE-256 (message only) & $2^{-0}$ & $2^{-2}$ & $2^{-12}$ & $2^{-39}?$ & - & - & - \\
-  BLAKE\{2s,3\} (message only) & $2^{-0}$ & $2^{-7}$ & $2^{-32}$ & - & - & - & - \\
+  Function & 0.5   & 1     & 1.5   & 2     & 2.5   & 3     & 3.5 \\ \midrule
+  BLAKE-256 c.f. & $2^{-0}$ & $2^{-0}$ & $2^{-0}$ & $2^{-1}$ & $2^{-6}$ & $2^{-7}$ & $2^{-38}$  \\
+  BLAKE\{2s,3\} c.f.   &  $2^{-0}$  & $2^{-0}$ &  $2^{-0}$  & $2^{-1}$ & $2^{-32}$   & $2^{-88} \le p<2^{-48}$ & -  \\
+  BLAKE\{-256,2s,3\} & $2^{-0}$ & $2^{-1}$ & $2^{-32}$ & ${\ge 2^{-190}}^\ast$ & - & - & -  \\ % 2^{-190} with 8-symmetric $\Delta$, $2^{-230}$ with 4-symmetric $\Delta$ m10 = 0x88888888
+  BLAKE-256 c.f. (CV only) & $2^{-0}$ & $2^{-2}$ & $2^{-12}$ & $2^{-39}$ & - & - & - \\
+  BLAKE\{2s,3\} c.f. (CV only) & $2^{-0}$ & $2^{-7}$ & $2^{-32}$ & ${\ge 2^{-161}}^\ast$ & - & - & - \\ % 2^{-161} with 8-symmetric $\Delta$, $2^{-161}$ with 4-symmetric $\Delta$
   \bottomrule
 \end{tabular}
 \end{table}
@@ -698,11 +698,10 @@ See~\cite{TMC}.
 
 An incremental implementation of BLAKE3 needs two major components: the state
 of the current chunk and a stack of subtree chaining values (the ``CV stack'').
-The chunk state is structurally simliar to an incremental implementation of the
+The chunk state is structurally similar to an incremental implementation of the
 sequential mode of BLAKE2. Simplifying the management of the CV stack is
 especially important for a concise and correct implementation of BLAKE3. This
-section is best read together with the code of the reference implementation.
-[LINK TO REFERENCE IMPLEMENTATION HERE.]
+section is best read together with \href{https://github.com/blake3-team/blake3}{the code of the reference implementation}.
 
 \subsubsection{Chunk State}\label{sec:chunkstate}
 
@@ -719,7 +718,7 @@ least 1 byte in the block after. For that reason, the chunk state waits to
 compress the next block until both the buffer is full and the caller has
 supplied more input. Note that the CV stack takes the same approach immediately
 below: chunk CVs are added to the stack only after the caller supplies at least
-1 bytes for for the following chunk.
+1 byte for the following chunk.
 
 \subsubsection{Chaining Value Stack}\label{sec:cvstack}
 
@@ -812,7 +811,7 @@ Listing~\ref{listing:push_chunk_chaining_value} shows this algorithm as it
 appears in the Rust reference implementation.
 
 \begin{listing}[h]
-\begin{minted}{rust}
+\begin{minted}[fontsize=\footnotesize]{rust}
 fn push_chunk_chaining_value(&mut self, mut cv: [u32; 8], total_bytes: u64) {
     // The new chunk chaining value might complete some subtrees along the
     // right edge of the growing tree. For each completed subtree, pop its
@@ -993,6 +992,14 @@ Like \texttt{keyed\_hash}, \texttt{derive\_key} does not require any extra
 compressions. For context strings up to 64 bytes and derived key lengths up to
 64 bytes, \texttt{derive\_key} is a single compression. For comparison, HKDF
 generally requires eight compressions.
+
+\subsection{Stateful Hash Object}\label{sec:sho}
+
+Trevor's thing: \url{https://github.com/noiseprotocol/sho_spec/blob/master/sho.md}
+
+Due to its zero-overhead keying and variable-length output, BLAKE3 may be adapted into a SHO quite easily. Let $l$ be some initial label. The initial key---the key at each step representing the SHO state---is obtained as $k_0 =\text{\texttt{derive\_key}}(l)$, after which we have $k_{i+1}, c_{i+1} = \text{\texttt{keyed\_hash}}(k_i, m_i)}$, where $m_i$ is the input at step $i$, and $c_i$ is the ``squeezing'' output.
+
+This SHO should be sound as long as BLAKE3 behaves like a random function, and there are no key collisions. So up to about $2^{128}$ compression function calls.
 
 \subsection{Streaming Verification}\label{sec:streamingverification}
 
