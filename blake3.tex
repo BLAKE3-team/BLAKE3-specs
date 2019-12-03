@@ -700,11 +700,11 @@ above, chunk CVs are added only after the caller has supplied at least 1 byte
 for the following chunk, so we know that these chunks and parent nodes are not
 the root of the tree, and we do not need to worry about the \texttt{ROOT} flag
 yet. When the first chunk CV is added, $c_0$, it is alone. When the second
-chunk CV is added, $c_1$, it completes a subtree of size 2, and the first
-parent CV can be computed, $p_0$. The third chunk CV, $c_2$, does not complete
-any subtrees. The fourth chunk CV, $c_3$, completes two subtrees, one of size 2
-and one of size 4. First it joins with $c_2$ giving a new parent CV, $p_1$.
-Then $p_1$ joins with $p_0$, giving $p_2$.
+chunk CV is added, $c_1$, it completes a subtree of size 2, and we can compute
+the first parent CV, $p_0$. The third chunk CV, $c_2$, does not complete any
+subtrees. The fourth chunk CV, $c_3$, completes two subtrees, one of size 2 and
+one of size 4. First it joins with $c_2$ giving a new parent CV, $p_1$. Then
+$p_1$ joins with $p_0$, giving $p_2$.
 
 \begin{figure}[h]
 \centering
@@ -752,7 +752,7 @@ Then $p_1$ joins with $p_0$, giving $p_2$.
 \end{figure}
 
 Note that once a subtree is complete, none of its child CVs need to be stored
-any longer. The CVs that we still need are stored in the CV stack. We can look
+any longer. We store the CVs that we still need in the CV stack. We can look
 through Figure~\ref{fig:incrementaltrees} again, this time focusing on the
 solid and dotted boxes, with dotted boxes representing the CVs that no longer
 need to be stored. When $c_0$ is alone, it is the only entry in the CV stack.
@@ -775,7 +775,7 @@ now contains two CVs. And with four chunks in the tree (0b100), the stack once
 again contains one CV. When we eventually reach seven chunks (0b111), the stack
 will contain three CVs.
 
-This invariant leads to an algorithm for adding chunk CVs to the stack:
+This invariant leads to an algorithm for adding a chunk CV to the stack:
 Continue popping CVs off the stack to form new parent nodes, as long as the
 number of entries in the stack is greater than or equal to the number of 1 bits
 in the new total number of chunks.
