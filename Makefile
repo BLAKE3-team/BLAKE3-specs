@@ -3,3 +3,6 @@ all: blake3.tex blake3.bib
 
 preview:
 	latexmk -pvc -pdf -silent -shell-escape -auxdir=build -outdir=build blake3.tex
+clean:
+	rm -rf build/
+
