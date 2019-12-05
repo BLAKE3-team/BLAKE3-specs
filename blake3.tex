@@ -12,8 +12,8 @@
   pdfsubject={BLAKE3},  % subject of the document
   pdfnewwindow=true,    % links in new window
   colorlinks=true,      % false: boxed links; true: colored links
-  linkcolor=darkgreen,  % color of internal links
-  citecolor=darkblue,   % color of links to bibliography
+  linkcolor=orangered,  % color of internal links
+  citecolor=orangered,   % color of links to bibliography
   filecolor=magenta,    % color of file links
   urlcolor=orangered,   % color of external links
 ]{hyperref}
@@ -70,6 +70,7 @@
 \definecolor{darkblue}{RGB}{0,0,170}
 \definecolor{darkgreen}{RGB}{0,170,0}
 \definecolor{orangered}{RGB}{255,69,0}
+\definecolor{bluecompl}{RGB}{0,186,255}
 
 \newdateformat{mydate}{\THEYEAR.\twodigit\THEMONTH.\twodigit\THEDAY}
 
@@ -140,7 +141,11 @@ Zooko Wilcox-O'Hearn (\texttt{@zooko}) \\
    \end{minipage}
 \end{center}
 
-\smallskip
+\newpage
+
+\tableofcontents
+
+\newpage
 
 \section{Introduction}\label{sec:intro}
 
