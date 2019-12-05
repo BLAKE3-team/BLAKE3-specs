@@ -331,8 +331,8 @@ The $\IV_{0} \ldots \IV_{7}$ constants are the same as in
 BLAKE2s, and they are reproduced in Appendix~\ref{sec:ivconstants}.
 
 The compression function applies a 7-round keyed permutation $v' = E(m, v)$ to
-the state $v_0, \dots, v_{15}$, keyed by the message $m_0, \dots, m_{15}$. The
-keyed permutation here is identical to the one underlying BLAKE2s, and is
+the state $v_0 \dots v_{15}$, keyed by the message $m_0 \dots m_{15}$. The
+keyed permutation here is identical to that of BLAKE2s, and is
 reproduced in Appendix~\ref{sec:roundfn}.
 
 The output of the compression function $h_{0}' \ldots h_{15}'$ is
@@ -398,9 +398,9 @@ other in their key words $k_{0} \ldots k_{7}$ and in the additional flags they
 set for every call to the compression function:
 
 \begin{itemize}
-  \item In the \texttt{hash} mode, $k_{0} \ldots k_{7}$ are the constants $\IV_0 \ldots \IV_7$, and no additional flags are set. 
-  \item In the \texttt{keyed\_hash} mode, $k_{0} \ldots k_{7}$ are parsed in little-endian order from the 32-byte key given by the caller, and the \texttt{KEYED\_HASH} flag is set for every compression.
-  \item  In the \texttt{derive\_key} mode, the key is again given by the caller, and the \texttt{DERIVE\_KEY} flag is set for every compression.
+  \item \texttt{hash}: $k_{0} \ldots k_{7}$ are the constants $\IV_0 \ldots \IV_7$, and no additional flags are set. 
+  \item \texttt{keyed\_hash}: $k_{0} \ldots k_{7}$ are parsed in little-endian order from the 32-byte key given by the caller, and the \texttt{KEYED\_HASH} flag is set for every compression.
+  \item \texttt{derive\_key}: the key is again given by the caller, and the \texttt{DERIVE\_KEY} flag is set for every compression.
 \end{itemize}
 
 \subsection{Chunk Chaining Values}\label{sec:chunk}
