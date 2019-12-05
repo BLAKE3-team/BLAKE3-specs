@@ -146,10 +146,11 @@ Zooko Wilcox-O'Hearn (\texttt{@zooko}) \\
 
 Since its announcement in 2012, BLAKE2~\cite{DBLP:conf/acns/AumassonNWW13} has 
 seen widespread adoption, in large
-part because of its strong performance in software. BLAKE2b and BLAKE2s are
-included in OpenSSL and in the Python and Go standard libraries. BLAKE2b is
-also included as the \texttt{b2sum} utility in GNU Coreutils, as the
-\texttt{generichash} API in Libsodium, and as the underlying hash function for
+part because of its superior performance in software. 
+BLAKE2b and BLAKE2s are included in OpenSSL and in the Python and Go
+standard libraries. 
+BLAKE2b is also included as the \texttt{b2sum} utility in GNU Coreutils,
+as the \texttt{generichash} API in Libsodium, and as the underlying hash function for
 Argon2, the winner of the Password Hashing Competition in 2015.
 
 A drawback of BLAKE2 has been its large number of incompatible variants. The
@@ -180,15 +181,17 @@ width, regardless of the word size of the compression function. That leaves us
 free to use a compression function that is efficient on smaller architectures,
 without sacrificing peak throughput on x86\=/64.
 
-The BLAKE3 compression function is closely based on BLAKE2s. BLAKE3 has the
-same 128-bit security level and 256-bit default output size. The round function
-is identical, along with the IV constants and the message schedule. Thus,
-cryptanalysis of BLAKE2 applies directly to BLAKE3. Based on that analysis and
-with the benefit of hindsight, we believe that BLAKE2 is overly conservative in
-its number of rounds, and BLAKE3 reduces the number of rounds from 10 to 7.
+The BLAKE3 compression function is closely based on that of BLAKE2s.
+BLAKE3 has the same 128-bit security level and 256-bit default output
+size. The round function is identical, along with the IV constants and
+the message schedule. Thus, cryptanalysis of BLAKE2 applies directly to
+BLAKE3. Based on that analysis and with the benefit of hindsight, we
+believe that BLAKE2 is overly conservative in its number of rounds, and
+BLAKE3 reduces the number of rounds from 10 to 7 (see~\cite{TMC} for
+detailed rationale).
 BLAKE3 also changes the setup and finalization steps of the compression
-function to support the internal tree structure, more efficient keying, and
-extendable output.
+function to support the internal tree structure, more efficient keying,
+and extendable output.
 
 The biggest changes from BLAKE2 to BLAKE3 are:
 
