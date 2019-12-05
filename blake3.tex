@@ -15,7 +15,7 @@
   linkcolor=darkgreen,  % color of internal links
   citecolor=darkblue,   % color of links to bibliography
   filecolor=magenta,    % color of file links
-  urlcolor=darkred,     % color of external links
+  urlcolor=orangered,   % color of external links
 ]{hyperref}
 \usepackage{url}
 %\usepackage{fullpage}
@@ -45,6 +45,7 @@
 \usepackage{subfigure}
 
 \usepackage[english]{babel}
+\usepackage[autostyle, english=american]{csquotes}
 
 \usepackage{xspace}
 \usepackage{booktabs}
@@ -68,6 +69,7 @@
 \definecolor{darkred}{RGB}{170,0,0}
 \definecolor{darkblue}{RGB}{0,0,170}
 \definecolor{darkgreen}{RGB}{0,170,0}
+\definecolor{orangered}{RGB}{255,69,0}
 
 \newdateformat{mydate}{\THEYEAR.\twodigit\THEMONTH.\twodigit\THEDAY}
 
@@ -79,36 +81,37 @@
 
 \newcommand{\alert}[1]{\textcolor{red}{#1}}
 
-\title{BLAKE3}
+\newcommand{\mytitle}{BLAKE3}
+
+\title{\mytitle}
+
 
 \begin{document}
 
 \fontfamily{phv}\selectfont
-
 \pagestyle{plain}
 
-%\maketitle
+\let\thefootnote\relax\footnote{Version \texttt{\pdfdate}.}
+\addtocounter{footnote}{-1}\let\thefootnote\svthefootnote
+
 \begin{center}
-{\huge BLAKE3: one function, fast everywhere}
-
-\bigskip
-
-\mydate\today 
-\quad---\quad
-{\large \tt REQUEST FOR COMMENTS, NOT A FINAL VERSION}
+{\Huge \bf \mytitle}
 
 \medskip
 
-\url{https://blake3.io}
+{\Large \bf  one function, fast everywhere}
 
 \medskip
 
-AUTHORS
-%Jack O'Connor (\texttt{@oconnor663}) \\
-%Jean-Philippe Aumasson (\texttt{@veorq}) \\
-%Samuel Neves (\texttt{@sevenps}) \\
-%Zooko Wilcox-O'Hearn (\texttt{@zooko}) \\
-%Christian Winnerlein (\texttt{@codesinchaos})
+Jack O'Connor (\texttt{@oconnor663}) \\
+Jean-Philippe Aumasson (\texttt{@veorq}) \\
+Samuel Neves (\texttt{@sevenps}) \\
+Zooko Wilcox-O'Hearn (\texttt{@zooko}) \\
+
+\medskip
+
+{\large \url{https://blake3.io}}
+
 \end{center}
 
 
@@ -117,19 +120,23 @@ AUTHORS
 \begin{center}
   \begin{minipage}{0.92\linewidth}
 
-      \textbf{Abstract.} We present the cryptographic hash function BLAKE3, an
-      improved derivative of BLAKE2 and of its predecessor, the SHA\=/3 finalist
-      BLAKE. BLAKE3 supports an unbounded degree of parallelism, using an internal
-      binary tree structure that scales up to any number of SIMD lanes and CPU cores.
-      On Intel Kaby Lake, peak single-threaded throughput is $3\times$ that of
-      BLAKE2b, $4\times$ that of SHA\=/2, and $8\times$ that of SHA\=/3, and it can scale
-      further using multiple threads. On the other end, BLAKE3 is also efficient on
-      smaller architectures and microcontrollers. Throughput on an ARM1176
+      We present the cryptographic hash function BLAKE3, an improved
+      derivative of BLAKE2 and of its predecessor, the SHA\=/3 finalist
+      BLAKE. 
+      BLAKE3 supports an unbounded degree of parallelism, using an
+      internal binary tree structure that scales up to any number of
+      SIMD lanes and CPU cores.  On Intel Kaby Lake, peak
+      single-threaded throughput is $3\times$ that of BLAKE2b, $4\times$
+      that of SHA\=/2, and $8\times$ that of SHA\=/3, and it can scale
+      further using multiple threads. 
+      BLAKE3 is also efficient on
+      smaller architectures and microcontrollers: throughput on an ARM1176 core
       is $1.3\times$ that of BLAKE2s or SHA\=/256, and $3\times$ that of BLAKE2b,
-      SHA\=/512, or SHA\=/3. Unlike BLAKE2 and SHA\=/2, which have incompatible
-      variants better suited for different platforms, BLAKE3 is a single hash
-      function, designed to be consistently fast in software across a wide
-      variety of platforms and use cases.
+      SHA\=/512, or SHA\=/3. 
+      Unlike BLAKE2 and SHA\=/2, which have incompatible variants better
+      suited for different platforms, BLAKE3 is a single hash function,
+      designed to be consistently fast across a wide variety of software
+      platforms and use cases.
 
    \end{minipage}
 \end{center}
