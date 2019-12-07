@@ -925,7 +925,7 @@ with either of the multi-threading strategies from \S\ref{sec:multithreading}.
 Rather than having each task or recursive leaf compress one chunk at a time,
 each can compress multiple chunks in parallel.
 
-\section{Memory Requirement}\label{sec:memory}
+\subsection{Memory Requirements}\label{sec:memory}
 
 BLAKE3 has a larger memory requirement than BLAKE2, because of the chaining
 value stack described in \S\ref{sec:cvstack}. An incremental implementation
@@ -951,7 +951,14 @@ tree depth is 3 and the CV stack is $3 \cdot 32 = 96$ bytes.
 
 \section{Applications}\label{sec:applications}
 
-\subsection{Message Authentication Codes}\label{sec:mac}
+As a general-purpose hash function, BLAKE3 is suitable whenever a
+collision-resistant or preimage-resistant hash function is needed to map
+some arbitrary-size input to a fixed-length output.
+BLAKE3 further supports keyed modes---in order to be used as a pseudorandom
+function, MAC, or key derivation function---as well as streaming and
+incremental processing features.
+
+\subsection{Pseudorandom Function and MAC}\label{sec:mac}
 
 Like BLAKE2, BLAKE3 has explicit support for a keyed mode,
 \texttt{keyed\_hash}. This removes the need for a separate construction like
