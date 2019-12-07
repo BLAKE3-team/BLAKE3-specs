@@ -645,19 +645,29 @@ This is the regime where BLAKE2bp and BLAKE2sp pull ahead of BLAKE3 in figures
 
 \section{Security}\label{sec:security}
 
+TODO
+
+\subsection{Security Goals}\label{sec:goals}
+
 BLAKE3 targets $128$-bit security for all of its security goals. That is, $128$-bit security against (second-)preimage, collision, or differentiability attacks.
 
 The key length is nevertheless $256$ bits, which is useful against multi-target or possible certificational attacks.
 
 Users who need $256$-bit security can remain using BLAKE2.
 
+On why 128-bit security is enough~\cite{TMC}.
+
 \subsection{Mode of Operation}\label{sec:mode}
 
 Indifferentiability / tree soundness stuff here~\cite{DBLP:journals/ijisec/BertoniDPA14,DBLP:journals/tosc/LuykxMN16,DBLP:journals/tosc/DaemenMA18}.
 
+Explain sufficient conditions satisfied..
+
 \subsection{Cryptanalysis}\label{sec:cryptanalysis}
 
 The rather aggressive round reduction from 10 to 7 rounds is based on existent cryptanalysis, along with novel research.
+
+See~\cite{TMC}.
 
 \begin{itemize}
   \item Cryptanalysis of BLAKE~\cite{DBLP:conf/cans/SuWWD10,DBLP:journals/ipl/VidaliNP10,DBLP:journals/iet-ifs/BaiYWW15,DBLP:conf/fse/AumassonGKMM10,DBLP:journals/iacr/JiL09,DK11,DBLP:conf/fse/BiryukovNR11}
