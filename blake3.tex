@@ -997,7 +997,7 @@ generally requires eight compressions.
 
 Trevor's thing: \url{https://github.com/noiseprotocol/sho_spec/blob/master/sho.md}
 
-Due to its zero-overhead keying and variable-length output, BLAKE3 may be adapted into a SHO quite easily. Let $l$ be some initial label. The initial key---the key at each step representing the SHO state---is obtained as $k_0 =\text{\texttt{derive\_key}}(l)$, after which we have $k_{i+1}, c_{i+1} = \text{\texttt{keyed\_hash}}(k_i, m_i)}$, where $m_i$ is the input at step $i$, and $c_i$ is the ``squeezing'' output.
+Due to its zero-overhead keying and variable-length output, BLAKE3 may be adapted into a SHO quite easily. Let $l$ be some initial label. The initial key---the key at each step representing the SHO state---is obtained as $k_0 =\text{\texttt{derive\_key}}(l)$, after which we have $k_{i+1}, c_{i+1} = \text{\texttt{keyed\_hash}}(k_i, m_i)$, where $m_i$ is the input at step $i$, and $c_i$ is the ``squeezing'' output.
 
 This SHO should be sound as long as BLAKE3 behaves like a random function, and there are no key collisions. So up to about $2^{128}$ compression function calls.
 
