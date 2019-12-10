@@ -196,7 +196,7 @@ For example, on Intel Kaby Lake peak throughput on a single core is triple
 that of BLAKE2b, and BLAKE3 can scale further to any number of cores. On an
 ARM1176, throughput is $1.3\times$ that of BLAKE2s and again triple that of
 BLAKE2b.
-To achieve such speed, BLAKE3 divides its input into 2~KiB chunks and
+To achieve such speed, BLAKE3 divides its input into 1~KiB chunks and
 arranges those chunks as the leaves of a binary tree. 
 This tree structure means that there is no limit to the parallelism that
 BLAKE3 can exploit, given enough input. 
@@ -224,7 +224,7 @@ and extendable output.
 
 \subsection{Tree Structure}\label{sec:tree}
 
-BLAKE3 splits its input into chunks of up to 2048 bytes and arranges those
+BLAKE3 splits its input into chunks of up to 1024 bytes and arranges those
 chunks as the leaves of a binary tree. The last chunk may be shorter, but not
 empty, unless the entire input is empty. If there is only one chunk, that chunk
 is the root node and only node of the tree. Otherwise, the chunks are assembled
@@ -302,7 +302,7 @@ the compression function are:
 \begin{itemize}
     \item The input chaining value, $h_{0} \ldots h_{7}$.
     \item The message block, $m_{0} \ldots m_{15}$.
-    \item A 64-bit offset, $t=t_{0},t_{1}$, with $t_{0}$ the lower order word
+    \item A 64-bit counter, $t=t_{0},t_{1}$, with $t_{0}$ the lower order word
         and $t_{1}$ the higher order word.
     \item The number of input bytes in the block, $b$.
     \item A set of domain separation bit flags, $d$.
@@ -405,7 +405,7 @@ set for every call to the compression function:
 
 \subsection{Chunk Chaining Values}\label{sec:chunk}
 
-Processing a chunk is structurally similar to the sequential hashing mode of BLAKE2. Each chunk of up to 2048 bytes is split into blocks of up to 64 bytes.
+Processing a chunk is structurally similar to the sequential hashing mode of BLAKE2. Each chunk of up to 1024 bytes is split into blocks of up to 64 bytes.
 The last block of the last chunk may be shorter, but not empty, unless the
 entire input is empty. The last block, if necessary, is padded with zeros to be 64
 bytes. 
@@ -418,9 +418,8 @@ compression function for the previous block.
 
 The remaining compression function parameters are handled as follows (see also Figure~\ref{fig:chunk} for an example):
 \begin{itemize}
-\item The offset $t$ for each block is
-the starting byte index of its chunk, i.e., $0$ for all blocks in the first chunk, $2048$
-for all blocks in the second chunk, and so on. 
+\item The counter $t$ for each block is the chunk index, i.e., $0$ for all
+blocks in the first chunk, $1$ for all blocks in the second chunk, and so on.
 \item The block length $b$ is the
 number of input bytes in each block, i.e., $64$ for all blocks except the last block of
 the last chunk, which may be short. 
@@ -492,7 +491,7 @@ fullcomp/.style={draw, rectangle, minimum height=1.5cm, minimum width=0.75cm, tr
 \node[above=0.5cm of f3] (m3) {$m_2$};
 \coordinate (tmp) at ($(f3.north west) + (-0.5cm, -0.25cm)$);
 
-\node[below = 0.33cm of tmp,scale=0.5,anchor=east] (t3) {$t=64$};
+\node[below = 0.33cm of tmp,scale=0.5,anchor=east] (t3) {$t=1$};
 \node[below = 0.66cm of tmp,scale=0.5,anchor=east] (b3) {$b=53$};
 \node[below = 0.99cm of tmp,scale=0.5,anchor=east] (d3) {$d=2^1+2^3$};
 
@@ -529,7 +528,7 @@ parent node. The chaining value of each parent node is given by a single call
 to the compression function. The input chaining value $h_{0} \ldots h_{7}$ is
 the key words $k_{0} \ldots k_{7}$. The message words $m_{0} \ldots m_{7}$ are
 the chaining value of the left child, and the message words $m_{8} \ldots
-m_{15}$ are the chaining value of the right child. The offset $t$ for parent
+m_{15}$ are the chaining value of the right child. The counter $t$ for parent
 nodes is always 0. The number of bytes $b$ for parent nodes is always 64.
 Parent nodes set the \texttt{PARENT} flag. If a parent node is the root of the
 tree, it also sets the \texttt{ROOT} flag. The output of the truncated
@@ -540,19 +539,20 @@ compression function is the chaining value of the parent node.
 BLAKE3 can produce outputs of any byte length up to $2^{64}$ bytes. 
 This is done by repeating the root compression---that is, the very last 
 call to the compression function, which sets the \texttt{ROOT} flag---with 
-incrementing values of the offset $t$. The results of these repeated root 
+incrementing values of the counter $t$. The results of these repeated root 
 compressions are then concatenated to form the output.
 
 When building the output, BLAKE3 uses the full output of the
 compression function (cf. \S\ref{sec:compression}). Each 16-word output is
 encoded as 64 bytes in little-endian order.
 
-Observe that for the first output, the root compression always uses offset $t
-= 0$. That is either because it is the last block of the only chunk, which has
-a chunk offset of $0$, or because it is a parent node. Then as long as more 
-bytes are needed, $t$ is incremented by 64, and the root compression is 
-repeated on the same inputs. If the target output length is not a multiple of 64, 
-the final compression output is truncated.
+Observe that based on \S\ref{sec:chunk} and \S\ref{sec:parent} above, the first
+root compression always uses the counter value $t = 0$. That is either because
+it is the last block of the only chunk, which has a chunk index of $0$, or
+because it is a parent node. After the first root compression, as long as more
+output bytes are needed, $t$ is incremented by 1, and the root compression is
+repeated on otherwise the same inputs. If the target output length is not a
+multiple of 64, the final compression output is truncated.
 
 Because the repeated root compressions differ only in the value of $t$, the
 implementation can execute any number of them in parallel. The caller can also
@@ -932,10 +932,10 @@ BLAKE3 has a larger memory requirement than BLAKE2, because of the chaining
 value stack described in \S\ref{sec:cvstack}. An incremental implementation
 needs space for a 32-byte chaining value for every level of the tree below the
 root. The maximum input size is $2^{64}-1$ bytes, and the chunk size is
-$2^{11}$ bytes, giving a maximum tree depth of $64 - 11 = 53$. The CV stack
-thus requires $53 \cdot 32 = 1696$ bytes. The chunk state
+$2^{11}$ bytes, giving a maximum tree depth of $64 - 10 = 54$. The CV stack
+thus requires $54 \cdot 32 = 1728$ bytes. The chunk state
 (cf.~\S\ref{sec:chunkstate}) also requires at least 104 bytes for the chaining
-value, the message block, and the chunk offset. The size of the reference
+value, the message block, and the chunk counter. The size of the reference
 implementation is 1848 bytes on the callstack.
 
 For comparison, BLAKE2s has a memory footprint similar to the BLAKE3 chunk
@@ -945,10 +945,10 @@ BLAKE2sp both require at least 776 bytes.
 
 Space-constrained implementations of BLAKE3 can save space by restricting the
 maximum input size. For example, the maximum size of an IPv6 ``jumbogram'' is
-$2^{32}-1$ bytes, or just under 4~GiB. At this size, the tree depth is 21 and
-the CV stack is $21 \cdot 32 = 672$ bytes. For another example, the maximum
+$2^{32}-1$ bytes, or just under 4~GiB. At this size, the tree depth is 22 and
+the CV stack is $22 \cdot 32 = 704$ bytes. For another example, the maximum
 size of a TLS record is $2^{14}$ bytes, or exactly 16~KiB. At this size, the
-tree depth is 3 and the CV stack is $3 \cdot 32 = 96$ bytes.
+tree depth is 4 and the CV stack is $4 \cdot 32 = 128$ bytes.
 
 \section{Applications}\label{sec:applications}
 
