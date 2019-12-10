@@ -37,6 +37,8 @@
 
 \usepackage[T1]{fontenc} % improves underscore rendering
 
+\usepackage{textcomp}
+\usepackage{microtype}
 \usepackage{multirow}
 \usepackage{booktabs}
 \usepackage{datetime}
@@ -79,6 +81,8 @@
 \newcommand{\cpress}{\text{\textbf{compress}}}
 \newcommand{\lto}{\leftarrow}
 \newcommand{\BB}{\mathsf{B2}}
+
+\newcommand{\flag}[1]{\texttt{\detokenize{#1}}\xspace}
 
 \newcommand{\alert}[1]{\textcolor{red}{#1}}
 
@@ -165,8 +169,8 @@ The biggest changes from BLAKE2 to BLAKE3 are:
     \item A compression function with \textbf{fewer rounds}.
     \item A \textbf{single hash function}, with no variants or flavors.
     \item In lieu of a parameter block, an API supporting \textbf{three
-        domain-separated modes}: \texttt{hash(input)},
-        \texttt{keyed\_hash(key, input)}, and \texttt{derive\_key(key,
+        domain-separated modes}: \flag{hash(input)},
+        \flag{keyed_hash(key, input)}, and \flag{derive_key(key,
         context)}. These modes differ only in the internal flag bits they set.
     \item The space formerly occupied by the parameter block is now used for
         the optional 256-bit key, so \textbf{keying is zero-cost}.
@@ -380,27 +384,27 @@ compression. Their names and values are given in Table~\ref{tab:flags}.
   \begin{tabular}{cc}
     \toprule
     Flag name             & Value \\ \midrule
-    \texttt{CHUNK\_START} & $2^0$ \\
-    \texttt{CHUNK\_END}   & $2^1$ \\
-    \texttt{PARENT}       & $2^2$ \\
-    \texttt{ROOT}         & $2^3$ \\
-    \texttt{KEYED\_HASH}  & $2^4$ \\
-    \texttt{DERIVE\_KEY}  & $2^5$ \\
+    \flag{CHUNK_START} & $2^0$ \\
+    \flag{CHUNK_END}   & $2^1$ \\
+    \flag{PARENT}       & $2^2$ \\
+    \flag{ROOT}         & $2^3$ \\
+    \flag{KEYED_HASH}  & $2^4$ \\
+    \flag{DERIVE_KEY}  & $2^5$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \subsection{Modes}\label{sec:modes}
 
-BLAKE3 defines three domain-separated modes: \texttt{hash},
-\texttt{keyed\_hash}, and \texttt{derive\_key}. The modes differ from each
+BLAKE3 defines three domain-separated modes: \flag{hash},
+\flag{keyed_hash}, and \flag{derive_key}. The modes differ from each
 other in their key words $k_{0} \ldots k_{7}$ and in the additional flags they
 set for every call to the compression function:
 
 \begin{itemize}
-  \item \texttt{hash}: $k_{0} \ldots k_{7}$ are the constants $\IV_0 \ldots \IV_7$, and no additional flags are set. 
-  \item \texttt{keyed\_hash}: $k_{0} \ldots k_{7}$ are parsed in little-endian order from the 32-byte key given by the caller, and the \texttt{KEYED\_HASH} flag is set for every compression.
-  \item \texttt{derive\_key}: the key is again given by the caller, and the \texttt{DERIVE\_KEY} flag is set for every compression.
+  \item \flag{hash}: $k_{0} \ldots k_{7}$ are the constants $\IV_0 \ldots \IV_7$, and no additional flags are set. 
+  \item \flag{keyed_hash}: $k_{0} \ldots k_{7}$ are parsed in little-endian order from the 32-byte key given by the caller, and the \flag{KEYED_HASH} flag is set for every compression.
+  \item \flag{derive_key}: the key is again given by the caller, and the \flag{DERIVE_KEY} flag is set for every compression.
 \end{itemize}
 
 \subsection{Chunk Chaining Values}\label{sec:chunk}
@@ -424,10 +428,10 @@ blocks in the first chunk, $1$ for all blocks in the second chunk, and so on.
 number of input bytes in each block, i.e., $64$ for all blocks except the last block of
 the last chunk, which may be short. 
 \item The first block of each chunk sets the
-\texttt{CHUNK\_START} flag (cf. Table~\ref{tab:flags}), and the last block of each chunk sets the
-\texttt{CHUNK\_END} flag. If a chunk contains only one block, that block sets
-both \texttt{CHUNK\_START} and \texttt{CHUNK\_END}. If a chunk is the root of
-its tree, the last block of that chunk also sets the \texttt{ROOT} flag.
+\flag{CHUNK_START} flag (cf. Table~\ref{tab:flags}), and the last block of each chunk sets the
+\flag{CHUNK_END} flag. If a chunk contains only one block, that block sets
+both \flag{CHUNK_START} and \flag{CHUNK_END}. If a chunk is the root of
+its tree, the last block of that chunk also sets the \flag{ROOT} flag.
 \end{itemize}
 
 The output of the truncated compression function for the last block in a chunk
@@ -713,8 +717,8 @@ parameters $t$ and $d$. Input bytes from the caller are copied into the buffer
 until it is full. Then the buffer is compressed together with the previous CV,
 using the truncated compression function. The output CV overwrites the previous
 CV, and the buffer is cleared. An important detail here is that the last block
-of a chunk is compressed differently, setting the \texttt{CHUNK\_END} flag and
-possibly the \texttt{ROOT} flag. In an incremental setting, any block could
+of a chunk is compressed differently, setting the \flag{CHUNK_END} flag and
+possibly the \flag{ROOT} flag. In an incremental setting, any block could
 potentially be the last, until the caller has supplied enough input to place at
 least 1 byte in the block after. For that reason, the chunk state waits to
 compress the next block until both the buffer is full and the caller has
@@ -962,20 +966,20 @@ incremental processing features.
 \subsection{Pseudorandom Function and MAC}\label{sec:mac}
 
 Like BLAKE2, BLAKE3 has explicit support for a keyed mode,
-\texttt{keyed\_hash}. This removes the need for a separate construction like
-HMAC. The \texttt{keyed\_hash} mode is also more efficient than keyed BLAKE2 or
+\flag{keyed_hash}. This removes the need for a separate construction like
+HMAC. The \flag{keyed_hash} mode is also more efficient than keyed BLAKE2 or
 HMAC for short messages. BLAKE2 requires an extra compression for the key
-block, and HMAC requires three extra compressions. The \texttt{keyed\_hash}
+block, and HMAC requires three extra compressions. The \flag{keyed_hash}
 mode in BLAKE3 does not require any extra compressions.
 
 \subsection{Key Derivation}\label{sec:kdf}
 
-BLAKE3 has explicit support for a key derivation mode, \texttt{derive\_key}. In
+BLAKE3 has explicit support for a key derivation mode, \flag{derive_key}. In
 this mode the input bytes should be a hardcoded, globally unique context
 string. A good default format for such strings is \texttt{"[application] [date]
 [purpose]"}, e.g., \texttt{"example.com 2019-12-25 16:18:03 session tokens
 v1"}. If the key material is not already 256 bits, it can be converted to 256
-bits using the \texttt{hash} mode. The \texttt{derive\_key} mode is intended to
+bits using the \flag{hash} mode. The \flag{derive_key} mode is intended to
 replace the BLAKE2 personalization parameter for its most common use cases.
 
 Key derivation can encourage better security than personalization, by
@@ -985,21 +989,21 @@ leaking its key. When an application needs to use one secret in multiple
 algorithms or contexts, the best practice is to derive a separate key for each
 use case, such that the original secret is only used with the key derivation
 function. However, because the BLAKE3 modes are domain-separated, it is also
-possible to use the same key with \texttt{keyed\_hash} and with
-\texttt{derive\_key}. This can be necessary for backwards compatibility when an
+possible to use the same key with \flag{keyed_hash} and with
+\flag{derive_key}. This can be necessary for backwards compatibility when an
 application adds a new use case for an existing key, if the original use case
 did not include a context-specific key derivation step.
 
-Like \texttt{keyed\_hash}, \texttt{derive\_key} does not require any extra
+Like \flag{keyed_hash}, \flag{derive_key} does not require any extra
 compressions. For context strings up to 64 bytes and derived key lengths up to
-64 bytes, \texttt{derive\_key} is a single compression. For comparison, HKDF
+64 bytes, \flag{derive_key} is a single compression. For comparison, HKDF
 generally requires eight compressions.
 
 \subsection{Stateful Hash Object}\label{sec:sho}
 
 Trevor's thing: \url{https://github.com/noiseprotocol/sho_spec/blob/master/sho.md}
 
-Due to its zero-overhead keying and variable-length output, BLAKE3 may be adapted into a SHO quite easily. Let $l$ be some initial label. The initial key---the key at each step representing the SHO state---is obtained as $k_0 =\text{\texttt{derive\_key}}(l)$, after which we have $k_{i+1}, c_{i+1} = \text{\texttt{keyed\_hash}}(k_i, m_i)$, where $m_i$ is the input at step $i$, and $c_i$ is the ``squeezing'' output.
+Due to its zero-overhead keying and variable-length output, BLAKE3 may be adapted into a SHO quite easily. Let $l$ be some initial label. The initial key---the key at each step representing the SHO state---is obtained as $k_0 =\text{\flag{derive_key}}(l)$, after which we have $k_{i+1}, c_{i+1} = \text{\flag{keyed_hash}}(k_i, m_i)$, where $m_i$ is the input at step $i$, and $c_i$ is the ``squeezing'' output.
 
 This SHO should be sound as long as BLAKE3 behaves like a random function, and there are no key collisions. So up to about $2^{128}$ compression function calls.
 
@@ -1080,7 +1084,7 @@ Exchange} format, and to the
 \href{https://www.bittorrent.org/beps/bep_0030.html}{BEP~30} extension of the
 BitTorrent protocol. However, neither of those prevents length extension, and
 the latter (if extracted from the BitTorrent protocol) does not provide
-second-preimage resistance. \cite{DBLP:journals/ijisec/BertoniDPA14}
+second-preimage resistance~\cite[\S8.5]{DBLP:journals/tosc/DaemenMA18}.
 
 \subsection{Incremental Update}\label{sec:incrementalupdate}
 
@@ -1089,7 +1093,7 @@ Giant disk images.
 \section{Rationales}\label{sec:rationales}
 
 % TODO: Let me know what you guys think about having an Acknowledgments section.
-\section{Acknowledgments}\label{sec:acknowledgments}
+\section*{Acknowledgments}\label{sec:acknowledgments}
 
 Thanks to Liming Luo for many discussions about the tree layout.
 
