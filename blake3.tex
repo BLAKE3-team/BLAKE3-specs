@@ -812,15 +812,15 @@ appears in the Rust reference implementation.
 
 \begin{listing}[h]
 \begin{minted}[fontsize=\footnotesize]{rust}
-fn push_chunk_chaining_value(&mut self, mut cv: [u32; 8], total_bytes: u64) {
+fn push_chunk_chaining_value(&mut self, mut cv: [u32; 8], total_chunks: u64) {
     // The new chunk chaining value might complete some subtrees along the
     // right edge of the growing tree. For each completed subtree, pop its
     // left child CV off the stack and compress a new parent CV. After as
     // many parent compressions as possible, push the new CV onto the
     // stack. The final length of the stack will be the count of 1 bits in
-    // the total number of chunks or (equivalently) input bytes so far.
-    let final_stack_len = total_bytes.count_ones() as u8;
-    while self.subtree_stack_len >= final_stack_len {
+    // the total number of chunks so far.
+    let final_stack_len = total_chunks.count_ones() as u8;
+    while self.cv_stack_len >= final_stack_len {
         cv = parent_output(&self.pop_stack(), &cv, &self.key, self.chunk_state.flags)
             .chaining_value();
     }
