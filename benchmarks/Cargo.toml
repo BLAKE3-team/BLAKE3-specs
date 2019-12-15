@@ -7,13 +7,10 @@ edition = "2018"
 name = "bench"
 harness = false
 
-[features]
-c_detect = ["blake3/c_detect"]
-rayon = ["blake3/rayon"]
-
 [dependencies]
-# "baokeshed" is a BLAKE3 prototype with a silly name.
-blake3 = { package = "baokeshed", git = "https://github.com/oconnor663/baokeshed", rev = "02543be8d36d4483175e83fd09b9091fed937d49" }
+# The official BLAKE3 Rust implementation. As a path dependency for now, until
+# the repo becomes public.
+blake3 = { path = "../../BLAKE3", features = ["c_avx512"] }
 # The uninline_portable feature improves BLAKE2b performance on the RPiZero.
 # That makes BLAKE2b performance on that platform in these benchmarks better
 # than what you get from e.g. OpenSSL BLAKE2b, though still worse than BLAKE2s.
