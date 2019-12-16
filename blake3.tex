@@ -189,7 +189,7 @@ BLAKE2bp and BLAKE2sp, with much higher peak throughput, are sparsely
 supported and almost never used.
 BLAKE3 instead is a single hash function, with no variants, designed to
 support all the use cases of BLAKE2, as well as new use cases like
-streaming verification. 
+verified streaming (see \S\ref{sec:verifiedstreaming}).
 
 BLAKE3 is also dramatically faster.
 For example, on Intel Kaby Lake peak throughput on a single core is triple
@@ -1005,63 +1005,82 @@ This SHO should be sound as long as BLAKE3 behaves like a random function, and t
 
 \subsection{Verified Streaming}\label{sec:verifiedstreaming}
 
-Because BLAKE3 is a tree hash, it supports a variety of incremental use cases
-that a serial hash function cannot. Consider a video streaming application that
-fetches video files from untrusted peers over a network. This application knows
-the expected hash of a file, and it needs to verify that the file is correct
-before playing it. With a serial hash function, it would need to download an
-entire file to check its hash. Data from the start of a video might be
-available immediately, but the application would not be able to play it until
-the rest of the download was finished. With BLAKE3, however, verified streaming
-is possible. The application can verify and play individual chunks of video as
-soon as they arrive.
+Because BLAKE3 is a tree hash, it supports new use cases that serial hash
+functions do not. One new use case is verified streaming. Consider a video
+streaming application that fetches video files from an untrusted host. The
+application knows the hash of the file it wants, and it needs to verify that
+the video data it receives matches that hash. With a serial hash function,
+nothing can be verified until the application has downloaded the entire file.
+But with BLAKE3, verified streaming is possible. The application can verify and
+play individual chunks of video as soon as they arrive.
 
-To accomplish this, the application fetches parent nodes in addition to chunks.
-For example, suppose the file is a short 4~KiB video composed of four chunks,
-as in the four-chunk tree in Figure~\ref{fig:fourchunks}. In order to verify
-the starting chunk and begin playing, the application first fetches the root
-node. (Recall that the contents of each parent node are the concatenated
-chaining values of its children.) It computes the root node's CV as per
-\S\ref{sec:parent} and confirms that it matches the expected 32-byte BLAKE3
-hash of the entire file. Then, the application fetches the first chunk's
-immediate parent node. It computes that node's CV and confirms that it matches
-the first 32-bytes of the root node. Finally, the application fetches the first
-chunk. It computes the chunk CV as per \S\ref{sec:chunk} and verifies that it
-matches the first 32-bytes of the immediate parent node. At this point the
-chunk is verified, and the application can play it.
+To verify an individual chunk without re-hashing the entire file, we verify
+each parent node on the path from the root to that chunk. For example, suppose
+the file is composed of four chunks, as in the four-chunk tree in
+Figure~\ref{fig:fourchunks}. To verify the first chunk, we start by fetching
+the root node. (Specifically, we fetch its message bytes, the concatenated
+chaining values of its children.) We compute the root node's CV as per
+\S\ref{sec:parent} and confirm that it matches the 32-byte BLAKE3 hash of the
+entire file. Then, we fetch the root node's left child, which is the first
+chunk's parent. We compute that node's CV and confirm that it matches the first
+32-bytes of the root node. Finally, we fetch the first chunk itself. We compute
+its CV as per \S\ref{sec:chunk} and verify that it matches the first 32-bytes
+of its parent. This verifies that the first chunk is authentic, and we can
+pass it along to application code.
 
-Observe that if the application eventually plays the entire video, it will have
-verified all the nodes of the tree in pre-order. This suggests a simple wire
-format for the streaming protocol: The peer can concatenate all the parent
+To continue streaming, we can immediately fetch the second chunk. It shares the
+parent node of the first chunk, and its CV should match the second 32 bytes of
+that parent node. For the third chunk, we need to fetch its parent. The CV of
+that parent node should match the second 32 bytes of the root node, and then
+the CV of the third chunk should match the first 32 bytes of its parent. Note
+that whenever we fetch a parent node, we immediately use its first 32 bytes to
+check its left child's CV, and then we store its second 32 bytes to check its
+right child in the future. We can represent this with a stack of expected CVs.
+We push CVs onto this stack and pop them off, as we would with node pointers in
+a standard depth-first traversal of a binary tree. Note that this is different
+from the "CV stack" used for incremental hashing in \S\ref{sec:cvstack}; that
+stack holds CVs we have computed in the past, while this stack holds CVs we
+expect to compute in the future, and we manage them with different algorithms.
+
+Observe that if the application eventually verifies the entire file, it will
+have fetched all the nodes of the tree in pre-order. This suggests a simple
+wire format for a streaming protocol: The host can concatenate all the parent
 nodes and chunks together in pre-order and serve the concatenated bytes as a
 single stream. If the client application knows the length of the file in
 advance, it does not need any other information to parse the stream and verify
-each node.
+each node. In this format, the space overhead of the parent nodes approaches
+two CVs per chunk, or 6.25\%.
 
-If the client application does not know the length of the file in advance, it
-may receive the length from its peer, either separately or at the front of the
-stream. In this case, the length is untrusted. If the peer reports an incorrect
-length, the effect will be that at least the final chunk will fail
-verification. For this reason, if an application reads the file sequentially,
-it does not need to explicitly validate the length. Note though that if the
-reported length is 0, the file consists of a single empty chunk, and the
-application must not forget to verify the empty chunk's CV. (One way to make
-this mistake is to report EOF as soon as the read position equals the expected
-length, which is inadequate in the empty case.)
+If the client does not know the length of the file in advance, it may receive
+the length from the host, either separately or at the front of the stream. In
+this case, the length is untrusted. If the host reports an incorrect length,
+the effect will be that at least the final chunk will fail verification. For
+this reason, if an application reads the file sequentially, it does not need to
+explicitly verify the length. The stream may terminate with an error partway
+through if verification fails, as it would if the network connection failed. An
+important edge case, however,  is that if the reported length is 0, the file
+consists of a single empty chunk, and the implementation must not forget to
+verify that the file hash matches the empty chunk's CV. (One way to make this
+mistake is for the implementation to return end-of-file as soon as the current
+read position equals the expected length, verifying nothing in the zero-length
+case.)
 
-On the other hand, if an application implements seeking, more verification is
+On the other hand, if an application implements seeking, length verification is
 required. Seeking past the reported end-of-file, or performing an EOF-relative
-seek, would mean trusting the unverified length. In these cases, the
-application must explicitly verify the length by first seeking to and verifying
-the final chunk. If that succeeds, the length is correct.
+seek, would mean trusting an unverified length. In these cases, the
+implementation must first verify the length by seeking to and verifying the
+final chunk. If that succeeds, the length is authentic, and the implementation
+can proceed with the caller's requested seek.
 
-This verified streaming protocol has been implemented in the
-\href{https://github.com/oconnor663/bao}{the Bao project}. It is also
-conceptually similar to the existing Tree Hash Exchange format, and to the BEP
-30 extension of the BitTorrent protocol. However, neither of those prevents
-length extension, and the latter (if extracted from the BitTorrent protocol)
-does not provide second-preimage resistance.
-\cite{DBLP:journals/ijisec/BertoniDPA14}
+This verified streaming protocol has been implemented by the
+\href{https://github.com/oconnor663/bao}{Bao} tool. It is also conceptually
+similar to the existing
+\href{https://adc.sourceforge.io/draft-jchapweske-thex-02.html}{Tree Hash
+Exchange} format, and to the
+\href{https://www.bittorrent.org/beps/bep_0030.html}{BEP~30} extension of the
+BitTorrent protocol. However, neither of those prevents length extension, and
+the latter (if extracted from the BitTorrent protocol) does not provide
+second-preimage resistance. \cite{DBLP:journals/ijisec/BertoniDPA14}
 
 \subsection{Incremental Update}\label{sec:incrementalupdate}
 
