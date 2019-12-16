@@ -932,11 +932,11 @@ BLAKE3 has a larger memory requirement than BLAKE2, because of the chaining
 value stack described in \S\ref{sec:cvstack}. An incremental implementation
 needs space for a 32-byte chaining value for every level of the tree below the
 root. The maximum input size is $2^{64}-1$ bytes, and the chunk size is
-$2^{11}$ bytes, giving a maximum tree depth of $64 - 10 = 54$. The CV stack
+$2^{10}$ bytes, giving a maximum tree depth of $64 - 10 = 54$. The CV stack
 thus requires $54 \cdot 32 = 1728$ bytes. The chunk state
 (cf.~\S\ref{sec:chunkstate}) also requires at least 104 bytes for the chaining
 value, the message block, and the chunk counter. The size of the reference
-implementation is 1848 bytes on the callstack.
+implementation is 1880 bytes on the callstack.
 
 For comparison, BLAKE2s has a memory footprint similar to the BLAKE3 chunk
 state alone, at least 104 bytes. BLAKE2b has twice the chaining value size and
