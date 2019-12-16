@@ -1003,9 +1003,65 @@ Due to its zero-overhead keying and variable-length output, BLAKE3 may be adapte
 
 This SHO should be sound as long as BLAKE3 behaves like a random function, and there are no key collisions. So up to about $2^{128}$ compression function calls.
 
-\subsection{Streaming Verification}\label{sec:streamingverification}
+\subsection{Verified Streaming}\label{sec:verifiedstreaming}
 
-Bao, basically.
+Because BLAKE3 is a tree hash, it supports a variety of incremental use cases
+that a serial hash function cannot. Consider a video streaming application that
+fetches video files from untrusted peers over a network. This application knows
+the expected hash of a file, and it needs to verify that the file is correct
+before playing it. With a serial hash function, it would need to download an
+entire file to check its hash. Data from the start of a video might be
+available immediately, but the application would not be able to play it until
+the rest of the download was finished. With BLAKE3, however, verified streaming
+is possible. The application can verify and play individual chunks of video as
+soon as they arrive.
+
+To accomplish this, the application fetches parent nodes in addition to chunks.
+For example, suppose the file is a short 4~KiB video composed of four chunks,
+as in the four-chunk tree in Figure~\ref{fig:fourchunks}. In order to verify
+the starting chunk and begin playing, the application first fetches the root
+node. (Recall that the contents of each parent node are the concatenated
+chaining values of its children.) It computes the root node's CV as per
+\S\ref{sec:parent} and confirms that it matches the expected 32-byte BLAKE3
+hash of the entire file. Then, the application fetches the first chunk's
+immediate parent node. It computes that node's CV and confirms that it matches
+the first 32-bytes of the root node. Finally, the application fetches the first
+chunk. It computes the chunk CV as per \S\ref{sec:chunk} and verifies that it
+matches the first 32-bytes of the immediate parent node. At this point the
+chunk is verified, and the application can play it.
+
+Observe that if the application eventually plays the entire video, it will have
+verified all the nodes of the tree in pre-order. This suggests a simple wire
+format for the streaming protocol: The peer can concatenate all the parent
+nodes and chunks together in pre-order and serve the concatenated bytes as a
+single stream. If the client application knows the length of the file in
+advance, it does not need any other information to parse the stream and verify
+each node.
+
+If the client application does not know the length of the file in advance, it
+may receive the length from its peer, either separately or at the front of the
+stream. In this case, the length is untrusted. If the peer reports an incorrect
+length, the effect will be that at least the final chunk will fail
+verification. For this reason, if an application reads the file sequentially,
+it does not need to explicitly validate the length. Note though that if the
+reported length is 0, the file consists of a single empty chunk, and the
+application must not forget to verify the empty chunk's CV. (One way to make
+this mistake is to report EOF as soon as the read position equals the expected
+length, which is inadequate in the empty case.)
+
+On the other hand, if an application implements seeking, more verification is
+required. Seeking past the reported end-of-file, or performing an EOF-relative
+seek, would mean trusting the unverified length. In these cases, the
+application must explicitly verify the length by first seeking to and verifying
+the final chunk. If that succeeds, the length is correct.
+
+This verified streaming protocol has been implemented in the
+\href{https://github.com/oconnor663/bao}{the Bao project}. It is also
+conceptually similar to the existing Tree Hash Exchange format, and to the BEP
+30 extension of the BitTorrent protocol. However, neither of those prevents
+length extension, and the latter (if extracted from the BitTorrent protocol)
+does not provide second-preimage resistance.
+\cite{DBLP:journals/ijisec/BertoniDPA14}
 
 \subsection{Incremental Update}\label{sec:incrementalupdate}
 
