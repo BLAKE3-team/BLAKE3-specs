@@ -866,7 +866,7 @@ play individual chunks of video as soon as they arrive.
 
 To verify an individual chunk without re-hashing the entire file, we verify
 each parent node on the path from the root to that chunk. For example, suppose
-the file is composed of four chunks, as in the four-chunk tree in
+the file is composed of four chunks, like the four-chunk tree in
 Figure~\ref{fig:fourchunks}. To verify the first chunk, we start by fetching
 the root node. (Specifically, we fetch its message bytes, the concatenated
 chaining values of its children.) We compute the root node's CV as per
@@ -875,8 +875,8 @@ entire file. Then, we fetch the root node's left child, which is the first
 chunk's parent. We compute that node's CV and confirm that it matches the first
 32-bytes of the root node. Finally, we fetch the first chunk itself. We compute
 its CV as per \S\ref{sec:chunk} and verify that it matches the first 32-bytes
-of its parent. This verifies that the first chunk is authentic, and we can
-pass it along to application code.
+of its parent. This verifies that the first chunk is authentic, and we can pass
+it along to application code.
 
 To continue streaming, we can immediately fetch the second chunk. It shares the
 parent node of the first chunk, and its CV should match the second 32 bytes of
@@ -887,10 +887,10 @@ that whenever we fetch a parent node, we immediately use its first 32 bytes to
 check its left child's CV, and then we store its second 32 bytes to check its
 right child in the future. We can represent this with a stack of expected CVs.
 We push CVs onto this stack and pop them off, as we would with node pointers in
-a standard depth-first traversal of a binary tree. Note that this is different
-from the "CV stack" used for incremental hashing in \S\ref{sec:cvstack}; that
-stack holds CVs we have computed in the past, while this stack holds CVs we
-expect to compute in the future, and we manage them with different algorithms.
+a depth-first traversal of a binary tree. Note that this is different from the
+"CV stack" used for incremental hashing in \S\ref{sec:cvstack}; that stack
+holds CVs we have computed in the past, while this stack holds CVs we expect to
+compute in the future, and we manage them with different algorithms.
 
 Observe that if the application eventually verifies the entire file, it will
 have fetched all the nodes of the tree in pre-order. This suggests a simple
@@ -907,13 +907,12 @@ this case, the length is untrusted. If the host reports an incorrect length,
 the effect will be that at least the final chunk will fail verification. For
 this reason, if an application reads the file sequentially, it does not need to
 explicitly verify the length. The stream may terminate with an error partway
-through if verification fails, as it would if the network connection failed. An
-important edge case, however,  is that if the reported length is 0, the file
-consists of a single empty chunk, and the implementation must not forget to
-verify that the file hash matches the empty chunk's CV. (One way to make this
-mistake is for the implementation to return end-of-file as soon as the current
-read position equals the expected length, verifying nothing in the zero-length
-case.)
+through if verification fails, as it might if the network connection failed. An
+important edge case is that, if the reported length is 0, the file consists of
+a single empty chunk, and the implementation must not forget to verify that the
+file hash matches the empty chunk's CV. (One way to make this mistake is for
+the implementation to return end-of-file as soon as the current read position
+equals the expected length, verifying nothing in the zero-length case.)
 
 On the other hand, if an application implements seeking, length verification is
 required. Seeking past the reported end-of-file, or performing an EOF-relative
@@ -923,8 +922,8 @@ final chunk. If that succeeds, the length is authentic, and the implementation
 can proceed with the caller's requested seek.
 
 This verified streaming protocol has been implemented by the
-\href{https://github.com/oconnor663/bao}{Bao} tool. It is also conceptually
-similar to the existing
+\href{https://github.com/oconnor663/bao}{Bao} tool. It is conceptually similar
+to the existing
 \href{https://adc.sourceforge.io/draft-jchapweske-thex-02.html}{Tree Hash
 Exchange} format, and to the
 \href{https://www.bittorrent.org/beps/bep_0030.html}{BEP~30} extension of the
