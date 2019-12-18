@@ -933,7 +933,28 @@ second-preimage resistance~\cite[\S8.5]{DBLP:journals/tosc/DaemenMA18}.
 
 \subsection{Incremental Update}\label{sec:incrementalupdate}
 
-Giant disk images.
+Another new use case supported by BLAKE3 is incrementally updating the root
+hash when an input is edited in place. A serial hash function can efficiently
+append new bytes to the end of an input, but editing bytes at the beginning or
+in the middle requires re-hashing everything to the right of the edit. With
+BLAKE3, an application can edit bytes anywhere in its input and re-hash just
+the modified chunks and their transitive parent nodes.
+
+For example, consider an input composed of four chunks, again like the
+four-chunk tree in Figure~\ref{fig:fourchunks}. Suppose we overwrite some bytes
+in the second chunk. To update the root hash, we first compute the second
+chunk's new CV as per \S\ref{sec:chunk}. Then we recompute the CV for the
+second chunk's parent as per \S\ref{sec:parent}. Note that because the first
+chunk is unchanged, the first 32 message bytes for this parent node are
+unchanged also, and we do not need to re-read the first chunk. Finally, we
+recompute the CV of the root node, and we similarly do not need to re-read
+anything from the right half of the tree.
+
+Note that this strategy cannot efficiently insert or remove bytes from the
+middle of an input. That would change the position of all the bytes to the
+right of the edit and force re-hashing. This is similar to the constraints of a
+typical filesystem, where appends and in-place edits are efficent, but
+insertions and removals within a file are either slow or unsupported.
 
 \section{Rationales}\label{sec:rationales}
 
