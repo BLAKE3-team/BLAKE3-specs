@@ -1000,6 +1000,37 @@ of those use cases benefit from a small chunk size.
 
 \subsection{Word Size}\label{sec:wordsize}
 
+BLAKE3 uses 32-bit words. The performance tradeoffs between 32-bit and 64-bit
+words are complex, and they depend on both the platorm and the size of the
+input.
+
+Many sources note that SHA-512 (because it uses 64-bit words) is faster on
+64-bit machines than SHA-256 (because it uses 32-bit words). A similar effect
+applies to BLAKE2b and BLAKE2s. However, this effect does not apply to
+algorithms that incorporate more SIMD parallelism. BLAKE2sp is faster than
+BLAKE2bp on modern x86 platforms. This is because the SIMD instructions that
+operate on 8 lanes of 32-bit words have the same throughput as those that
+operate on 4 lanes of 64-bit words. The remaining difference for long inputs is
+that the smaller state size of BLAKE2sp requires fewer rounds of compression.
+
+Instead, performance differences between the word sizes on x86 are restricted
+to short inputs. A 32-bit compression function takes fewer cycles than a 64-bit
+one, so inputs up to 64 bytes perform better with 32-bit words. On the other
+hand, a 64-bit compression function has higher throughput prior to multi-chunk
+parallelism kicking in, so inputs longer than 64 bytes but shorter than one
+chunk perform better with 64-bit words. Neither of these effects is likely to
+be noticeable in typical applications, which only bottleneck on hash function
+throughput for very long inputs.
+
+The decisive difference between the word sizes, then, is performance on smaller
+architectures and embedded systems. BLAKE3 is designed to be a general-purpose
+hash function, suitable for replacing both BLAKE2b and BLAKE2s. On platforms
+like the ARM1176 where BLAKE2s does well, a 64-bit hash function could be a
+performance regression. Choosing 32-bit words is a substantial benefit for
+these platforms, with little or no downside for x86 implementations.
+Cross-platform flexibility is also a benefit for protocol designers, who have
+to consider the performance of an algorithm across many different platforms.
+
 \subsection{Compression Function Feed Forward}\label{sec:feedforward}
 
 \subsection{Chunk Counter}\label{sec:chunkcounter}
