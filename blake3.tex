@@ -653,6 +653,8 @@ now contains two CVs. And with four chunks in the tree (0b100), the stack once
 again contains one CV. When we eventually reach seven chunks (0b111), the stack
 will contain three CVs.
 
+\alert{To understand why this works, decompose the number of chunks hashed so far in its base 2 form: $b_0\cdot 2^0 + b_1\cdot 2^1 + \dots + b_{63}\cdot 2^{63}$. Each $b_i \ne 0$ corresponds to a full power-of-2 subtree that has been completed and whose CV can be stored without its children. (Saying the same as above, but powers of 2 make it seem less magical than bits.)}
+
 This invariant leads to an algorithm for adding a chunk CV to the stack:
 Continue popping CVs off the stack to form new parent nodes, as long as the
 number of entries in the stack is greater than or equal to the number of 1 bits
