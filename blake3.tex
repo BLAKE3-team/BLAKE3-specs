@@ -160,7 +160,7 @@ BLAKE2b and BLAKE2s are included in OpenSSL and in the Python and Go
 standard libraries. 
 BLAKE2b is also included as the \texttt{b2sum} utility in GNU Coreutils,
 as the \texttt{generichash} API in Libsodium, and as the underlying hash function for
-Argon2, the winner of the Password Hashing Competition in 2015.
+Argon2~\cite{DBLP:conf/eurosp/BiryukovDK16}, the winner of the Password Hashing Competition in 2015.
 
 The biggest changes from BLAKE2 to BLAKE3 are:
 
@@ -187,23 +187,22 @@ BLAKE2X paper later added extendable output modes.
 None of these are compatible with each other, and choosing the right one
 for an application means understanding both the tradeoffs between them
 and also the state of language and library support.  
-BLAKE2b, the most widely supported, is rarely the fastest on any
-particular platform.
+BLAKE2b, the most widely supported, is not the fastest on most platforms.
 BLAKE2bp and BLAKE2sp, with much higher peak throughput, are sparsely
-supported and almost never used.
+supported and rarely adopted.
 BLAKE3 instead is a single hash function, with no variants, designed to
 support all the use cases of BLAKE2, as well as new use cases like
 verified streaming (see \S\ref{sec:verifiedstreaming}).
 
 BLAKE3 is also dramatically faster.
-For example, on Intel Kaby Lake peak throughput on a single core is triple
+For example, on an Intel Kaby Lake processor peak throughput on a single core is triple
 that of BLAKE2b, and BLAKE3 can scale further to any number of cores. On an
 ARM1176, throughput is $1.3\times$ that of BLAKE2s and again triple that of
 BLAKE2b.
-To achieve such speed, BLAKE3 divides its input into 1~KiB chunks and
+To achieve such speed, BLAKE3 splits its input into 1~KiB chunks and
 arranges those chunks as the leaves of a binary tree. 
 This tree structure means that there is no limit to the parallelism that
-BLAKE3 can exploit, given enough input. 
+BLAKE3 can exploit, given enough input~\cite{DBLP:journals/tosc/AtighehchiB17,DBLP:journals/tc/AtighehchiR17}. 
 The direct benefit of this parallelism is very high throughput on
 platforms with SIMD support, including all modern x86 processors.
 Another benefit of hashing chunks in parallel is that the implementation
@@ -214,9 +213,9 @@ smaller architectures, without sacrificing peak throughput on x86\=/64.
 
 The BLAKE3 compression function is closely based on that of BLAKE2s.
 BLAKE3 has the same 128-bit security level and 256-bit default output
-size. The round function is identical, along with the IV constants and
+size. The round function is identical, along with the IV constants \alert{and
 the message schedule. Thus, cryptanalysis of BLAKE2 applies directly to
-BLAKE3. Based on that analysis and with the benefit of hindsight, we
+BLAKE3.} Based on that analysis and with the benefit of hindsight, we
 believe that BLAKE2 is overly conservative in its number of rounds, and
 BLAKE3 reduces the number of rounds from 10 to 7 (see~\cite{TMC} for
 detailed rationale).
@@ -242,52 +241,14 @@ structure of the tree is determined by two rules:
         greater than or equal to the number of chunks in its sibling right
         subtree.
 \end{enumerate}
+In other words, given a message of $n > 1024$ bytes, the left subtree consists of the first $$2^{10 + \left\lfloor \log_2 \left(\left\lfloor \frac{n-1}{1024} \right\rfloor\right) \right\rfloor}$$ bytes, and the right subtree consists of the remainder.
+
 For example, trees from 1 to 4 chunks have the structure shown in
 Figure~\ref{fig:fourchunks}.
 
 \begin{figure}[h]
 \centering
-\begin{tikzpicture}
-
-\node[draw,rectangle] (chunk1) at (0, 0) {$c_0$};
-
-%%
-
-\node[draw,rectangle,right=1cm of chunk1] (chunk2) {$c_0$};
-\node[draw,rectangle,right=0.5cm of chunk2] (chunk3) {$c_1$};
-\node[draw,rectangle,above=1cm of chunk2] (parent1) at ($(chunk2)!0.5!(chunk3)$) {\phantom{$p_0$}};
-\draw[-latex] (chunk2) -- (parent1);
-\draw[-latex] (chunk3) -- (parent1);
-
-%%
-
-\node[draw,rectangle,right=1cm of chunk3] (chunk2) {$c_0$};
-\node[draw,rectangle,right=0.5cm of chunk2] (chunk3) {$c_1$};
-\node[draw,rectangle,above=1cm of chunk2] (parent1) at ($(chunk2)!0.5!(chunk3)$) {\phantom{$p_0$}};
-\node[draw,rectangle,right=0.5cm of parent1] (chunk4) {$c_2$};
-\node[draw,rectangle,above=1cm of chunk4] (parent2) at ($(parent1)!0.5!(chunk4)$) {\phantom{$p_0$}};
-\draw[-latex] (chunk2) -- (parent1);
-\draw[-latex] (chunk3) -- (parent1);
-\draw[-latex] (parent1) -- (parent2);
-\draw[-latex] (chunk4) -- (parent2);
-
-%%
-
-\node[draw,rectangle,below right=1cm of chunk4] (chunk2) {$c_0$};
-\node[draw,rectangle,right=0.5cm of chunk2] (chunk3) {$c_1$};
-\node[draw,rectangle,above=1cm of chunk2] (parent1) at ($(chunk2)!0.5!(chunk3)$) {\phantom{$p_0$}};
-\node[draw,rectangle,right=0.5cm of chunk3] (chunk4) {$c_2$};
-\node[draw,rectangle,right=0.5cm of chunk4] (chunk5) {$c_3$};
-\node[draw,rectangle,above=1cm of chunk4] (parent2) at ($(chunk4)!0.5!(chunk5)$) {\phantom{$p_0$}};
-\node[draw,rectangle,above=1cm of parent2] (parent3) at ($(parent1)!0.5!(parent2)$) {\phantom{$p_0$}};
-\draw[-latex] (chunk2) -- (parent1);
-\draw[-latex] (chunk3) -- (parent1);
-\draw[-latex] (chunk4) -- (parent2);
-\draw[-latex] (chunk5) -- (parent2);
-\draw[-latex] (parent1) -- (parent3);
-\draw[-latex] (parent2) -- (parent3);
-
-\end{tikzpicture}
+\input{img/tree1to4.tikz} 
 \caption{Example tree structures, from 1 to 4 chunks.}
 \label{fig:fourchunks}
 \end{figure}
@@ -297,10 +258,12 @@ parent node. The chaining value of the root node, encoded as 32 bytes in
 little-endian order, is the default-length BLAKE3 hash of the input. BLAKE3
 supports input of any byte length $0 \leq \ell < 2^{64}$.
 
+\alert{Lots of references to ``default length''. Given that the output is not different between different sizes---in theory, BLAKE3's output is an infinite-length string---it's much less of an issue than in BLAKE2.}
+
 \subsection{Compression Function}\label{sec:compression}
 
-The compression function takes an 8-word chaining value and a 16-word message
-block, and it returns a new 16-word value. A word is 32 bits. The inputs to
+The compression function takes an 8-word chaining value, a 16-word message
+block, and a 4-word parameter, and it returns a new 16-word value. A word is 32 bits. The inputs to
 the compression function are:
 
 \begin{itemize}
@@ -335,9 +298,9 @@ The $\IV_{0} \ldots \IV_{7}$ constants are the same as in
 BLAKE2s, and they are reproduced in Appendix~\ref{sec:ivconstants}.
 
 The compression function applies a 7-round keyed permutation $v' = E(m, v)$ to
-the state $v_0 \dots v_{15}$, keyed by the message $m_0 \dots m_{15}$. The
+the state $v_0 \dots v_{15}$, keyed by the message $m_0 \dots m_{15}$. \alert{The
 keyed permutation here is identical to that of BLAKE2s, and is
-reproduced in Appendix~\ref{sec:roundfn}.
+reproduced in Appendix~\ref{sec:roundfn}.}
 
 The output of the compression function $h_{0}' \ldots h_{15}'$ is
 defined as:
@@ -359,7 +322,7 @@ h_{14}' \ & \leftarrow \ v'_{14} \oplus  h_{6} \\
 h_{7}'  \ & \leftarrow \ v'_{7} \oplus  v'_{15} &
 h_{15}' \ & \leftarrow \ v'_{15} \oplus  h_{7}\,.
 \end{align*}
-If we define $v_l$ (resp. $v'_l$) and $v_h$ (resp. $v'_h$) as the first and last 8-words of the input (resp. output) of $E(m, v)$ as elements of $\mathbb{F}_2^{256}$, the compression function may be represented as 
+If we define $v_l$ (resp. $v'_l$) and $v_h$ (resp. $v'_h$) as the first and last 8-words of the input (resp. output) of $E(m, v)$ as elements of $\mathbb{F}_2^{256}$, the compression function may be represented as the affine transformation
 \[
   \begin{pmatrix}
     1 & 1 \\
@@ -372,10 +335,10 @@ If we define $v_l$ (resp. $v'_l$) and $v_h$ (resp. $v'_h$) as the first and last
    0 \\ v_l
   \end{pmatrix}\,.
 \]
-A common variant of the compression function, used internally to produce 256-bit chaining values, simply truncates the output to its first 256 bits. We defer to analysis of the compression function to \S\ref{sec:security}.
+The output of the compression function is often truncated to produce 256-bit chaining values. %We defer to analysis of the compression function to \S\ref{sec:security}.
 
 %\subsubsection{Flags}
-The compression function input $d$ is a bitfield, with each individual flag consisting of a power of 2 value. The value of $d$ is the sum of all the flags defined for a given
+The compression function input $d$ is a bitfield, with each individual flag consisting of a power of 2. The value of $d$ is the sum of all the flags defined for a given
 compression. Their names and values are given in Table~\ref{tab:flags}.
 \begin{table}
   \centering
@@ -425,7 +388,7 @@ The remaining compression function parameters are handled as follows (see also F
 \item The counter $t$ for each block is the chunk index, i.e., $0$ for all
 blocks in the first chunk, $1$ for all blocks in the second chunk, and so on.
 \item The block length $b$ is the
-number of input bytes in each block, i.e., $64$ for all blocks except the last block of
+number of input bytes in each block, i.e., $64$ for all full blocks except the last block of
 the last chunk, which may be short. 
 \item The first block of each chunk sets the
 \flag{CHUNK_START} flag (cf. Table~\ref{tab:flags}), and the last block of each chunk sets the
@@ -439,89 +402,7 @@ is the chaining value of that chunk.
 
 \begin{figure}
 \centering
-\begin{tikzpicture}[
-comp/.style={draw, trapezium, trapezium left angle=0, trapezium right angle=45, shape border rotate=270, minimum height=0.5cm, minimum width=1.5cm, trapezium stretches=false,anchor=north},
-fullcomp/.style={draw, rectangle, minimum height=1.5cm, minimum width=0.75cm, trapezium stretches=false,anchor=north},
-]
-
-\begin{scope}[xshift=0cm]
-\node[comp] (f0) {$F$};
-\node[above=0.5cm of f0] (m0) {$m_0$};
-\coordinate (tmp) at ($(f0.north west) + (-0.5cm, -0.25cm)$);
-\node[below = 0.00cm of tmp,scale=0.50,anchor=east] (iv) {$\mathrm{IV}$};
-\node[below = 0.33cm of tmp,scale=0.50,anchor=east] (t0) {$t=0$};
-\node[below = 0.66cm of tmp,scale=0.50,anchor=east] (b0) {$b=64$};
-\node[below = 0.99cm of tmp,scale=0.50,anchor=east] (d0) {$d=2^0$};
-
-\draw[-latex] (m0) -- (f0);
-\draw[-latex] (iv) -- (iv -| f0.west);
-\draw[-latex] (t0) -- (t0 -| f0.west);
-\draw[-latex] (b0) -- (b0 -| f0.west);
-\draw[-latex] (d0) -- (d0 -| f0.west);
-\end{scope}
-
-\begin{scope}[xshift=3cm]
-\node[comp] (f1) {$F$};
-\node[above=0.5cm of f1] (m1) {$m_1$};
-\coordinate (tmp) at ($(f1.north west) + (-0.5cm, -0.25cm)$);
-
-\node[below = 0.33cm of tmp,scale=0.5,anchor=east] (t1) {$t=0$};
-\node[below = 0.66cm of tmp,scale=0.5,anchor=east] (b1) {$b=64$};
-\node[below = 0.99cm of tmp,scale=0.5,anchor=east] (d1) {$d=0$};
-
-\draw[-latex] (m1) -- (f1);
-\draw[-latex] (t1) -- (t1 -| f1.west);
-\draw[-latex] (b1) -- (b1 -| f1.west);
-\draw[-latex] (d1) -- (d1 -| f1.west);
-\end{scope}
-
-\begin{scope}[xshift=6cm]
-\node[fullcomp] (f2) {$F$};
-\node[above=0.5cm of f2] (m2) {$m_2$};
-\coordinate (tmp) at ($(f2.north west) + (-0.5cm, -0.25cm)$);
-
-\node[below = 0.33cm of tmp,scale=0.5,anchor=east] (t2) {$t=0$};
-\node[below = 0.66cm of tmp,scale=0.5,anchor=east] (b2) {$b=53$};
-\node[below = 0.99cm of tmp,scale=0.5,anchor=east] (d2) {$d=2^1+2^3$};
-
-\draw[-latex] (m2) -- (f2);
-\draw[-latex] (t2) -- (t2 -| f2.west);
-\draw[-latex] (b2) -- (b2 -| f2.west);
-\draw[-latex] (d2) -- (d2 -| f2.west);
-\end{scope}
-
-\begin{scope}[xshift=6cm,yshift=-3cm]
-\node[fullcomp] (f3) {$F$};
-\node[above=0.5cm of f3] (m3) {$m_2$};
-\coordinate (tmp) at ($(f3.north west) + (-0.5cm, -0.25cm)$);
-
-\node[below = 0.33cm of tmp,scale=0.5,anchor=east] (t3) {$t=1$};
-\node[below = 0.66cm of tmp,scale=0.5,anchor=east] (b3) {$b=53$};
-\node[below = 0.99cm of tmp,scale=0.5,anchor=east] (d3) {$d=2^1+2^3$};
-
-\draw[-latex] (m3) -- (f3);
-\draw[-latex] (t3) -- (t3 -| f3.west);
-\draw[-latex] (b3) -- (b3 -| f3.west);
-\draw[-latex] (d3) -- (d3 -| f3.west);
-\end{scope}
-
-\coordinate (tmp) at (f1.west |- iv);
-\coordinate (tmp2) at ($(f0)!0.40!(f1)$);
-\draw[-latex] (f0) -- (f0 -| tmp2) -- (tmp2 |- tmp) -- (tmp);
-\coordinate (tmp) at (f2.west |- iv);
-\coordinate (tmp2) at ($(f1)!0.40!(f2)$);
-\draw[-latex] (f1) -- (f1 -| tmp2) -- (tmp2 |- tmp) -- (tmp);
-
-\coordinate (tmp) at ($(f3.north west) + (-0cm, -0.25cm)$);
-\coordinate (tmp2) at ($(f1.east) + (0.5cm, 0)$);
-\draw[-latex] (f1.east) -- (tmp2) -- (tmp2 |- tmp) -- (tmp);
-
-\node[right=0.5cm of f2] (out) {$h_0$};
-\draw[-latex] (f2) -- (out);
-\node[right=0.5cm of f3] (out) {$h_1$};
-\draw[-latex] (f3) -- (out);
-
-\end{tikzpicture}
+\input{img/chunk.tikz}
 \caption{Example of compression function inputs when hashing a 181-byte input $(m_0, m_1, m_2)$ into a 128-byte output $(h_0, h_1)$. Trapezia indicate that the compression function output is truncated to 256 bits.}\label{fig:chunk}
 \end{figure}
 
@@ -534,15 +415,15 @@ the key words $k_{0} \ldots k_{7}$. The message words $m_{0} \ldots m_{7}$ are
 the chaining value of the left child, and the message words $m_{8} \ldots
 m_{15}$ are the chaining value of the right child. The counter $t$ for parent
 nodes is always 0. The number of bytes $b$ for parent nodes is always 64.
-Parent nodes set the \texttt{PARENT} flag. If a parent node is the root of the
-tree, it also sets the \texttt{ROOT} flag. The output of the truncated
+Parent nodes set the \flag{PARENT} flag. If a parent node is the root of the
+tree, it also sets the \flag{ROOT} flag. The output of the truncated
 compression function is the chaining value of the parent node.
 
 \subsection{Extendable Output}\label{sec:extendable}
 
 BLAKE3 can produce outputs of any byte length up to $2^{64}$ bytes. 
 This is done by repeating the root compression---that is, the very last 
-call to the compression function, which sets the \texttt{ROOT} flag---with 
+call to the compression function, which sets the \flag{ROOT} flag---with 
 incrementing values of the counter $t$. The results of these repeated root 
 compressions are then concatenated to form the output.
 
@@ -570,7 +451,7 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 \begin{figure}[h]
 \centering
 %\input{./benchmarks/results/avx2_rayon.pgf}
-\input{./benchmarks/results/avx2_rayon.tikz}
+\input{./img/avx2_rayon.tikz}
 \caption{Throughput for a multi-threaded implementation of BLAKE3 at various
     input lengths on an Intel Kaby Lake processor.}
 \label{fig:avx2_rayon}
@@ -582,7 +463,7 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 \begin{figure}[h]
 \centering
 %\input{./benchmarks/results/avx512_detect_c.pgf}
-\input{./benchmarks/results/avx512_detect_c.tikz}
+\input{./img/avx512_detect_c.tikz}
 \caption{Throughput for a single-threaded implementation of BLAKE3 at various
     input lengths on an Intel Skylake-SP processor.}%
 \label{fig:avx512_c}
@@ -591,7 +472,7 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 \begin{figure}[h]
 \centering
 %\input{./benchmarks/results/rpizero.pgf}
-\input{./benchmarks/results/rpizero.tikz}
+\input{./img/rpizero.tikz}
 \caption{Throughput at various input lengths on an ARM1176 processor.}%
 \label{fig:rpizero}
 \end{figure}
@@ -732,7 +613,7 @@ To help picture the role of the CV stack, Figure~\ref{fig:incrementaltrees}
 shows a growing tree as chunk CVs are added incrementally. As just discussed
 above, chunk CVs are added only after the caller has supplied at least 1 byte
 for the following chunk, so we know that these chunks and parent nodes are not
-the root of the tree, and we do not need to worry about the \texttt{ROOT} flag
+the root of the tree, and we do not need to worry about the \flag{ROOT} flag
 yet. When the first chunk CV is added, $c_0$, it is alone. When the second
 chunk CV is added, $c_1$, it completes a subtree of size 2, and we can compute
 the first parent CV, $p_0$. The third chunk CV, $c_2$, does not complete any
@@ -742,44 +623,7 @@ $p_1$ joins with $p_0$, giving $p_2$.
 
 \begin{figure}[h]
 \centering
-\begin{tikzpicture}
-
-\node[draw,rectangle] (chunk1) at (0, 0) {$c_0$};
-
-%%
-
-\node[draw,rectangle,right=1.5cm of chunk1,dotted] (chunk2) {$c_0$};
-\node[draw,rectangle,right=0.5cm of chunk2,dotted] (chunk3) {$c_1$};
-\node[draw,rectangle,above=1cm of chunk2] (parent1) at ($(chunk2)!0.5!(chunk3)$) {$p_0$};
-\draw[-latex] (chunk2) -- (parent1);
-\draw[-latex] (chunk3) -- (parent1);
-
-%%
-
-\node[draw,rectangle,right=1.5cm of chunk3,dotted] (chunk2) {$c_0$};
-\node[draw,rectangle,right=0.5cm of chunk2,dotted] (chunk3) {$c_1$};
-\node[draw,rectangle,above=1cm of chunk2] (parent1) at ($(chunk2)!0.5!(chunk3)$) {$p_0$};
-\node[draw,rectangle,right=0.5cm of chunk3] (chunk4) {$c_2$};
-\draw[-latex] (chunk2) -- (parent1);
-\draw[-latex] (chunk3) -- (parent1);
-
-%%
-
-\node[draw,rectangle,right=1.5cm of chunk4,dotted] (chunk2) {$c_0$};
-\node[draw,rectangle,right=0.5cm of chunk2,dotted] (chunk3) {$c_1$};
-\node[draw,rectangle,above=1cm of chunk2,dotted] (parent1) at ($(chunk2)!0.5!(chunk3)$) {$p_0$};
-\node[draw,rectangle,right=0.5cm of chunk3,dotted] (chunk4) {$c_2$};
-\node[draw,rectangle,right=0.5cm of chunk4,dotted] (chunk5) {$c_3$};
-\node[draw,rectangle,above=1cm of chunk4,dotted] (parent2) at ($(chunk4)!0.5!(chunk5)$) {$p_1$};
-\node[draw,rectangle,above=1cm of parent2] (parent3) at ($(parent1)!0.5!(parent2)$) {$p_2$};
-\draw[-latex] (chunk2) -- (parent1);
-\draw[-latex] (chunk3) -- (parent1);
-\draw[-latex] (chunk4) -- (parent2);
-\draw[-latex] (chunk5) -- (parent2);
-\draw[-latex] (parent1) -- (parent3);
-\draw[-latex] (parent2) -- (parent3);
-
-\end{tikzpicture}
+\input{img/cvstack.tikz}
 \caption{An incomplete tree growing incrementally from 1 to 4 chunks. Dotted
     boxes represent CVs that no longer need to be stored.}
 \label{fig:incrementaltrees}
@@ -843,9 +687,9 @@ finalized, and the new chunk CV is merged with each entry in the CV stack from
 top to bottom. This happens regardless of the number of chunks so far,
 reflecting the fact that subtrees along the right edge of the tree may be
 incomplete. The last parent node compression in this case sets the
-\texttt{ROOT} flag. Or if there are no CVs in the stack, and thus no parent
+\flag{ROOT} flag. Or if there are no CVs in the stack, and thus no parent
 nodes to compress, finalization of the last (and only) chunk sets the
-\texttt{ROOT} flag.
+\flag{ROOT} flag.
 
 \subsection{Multi-threading}\label{sec:multithreading}
 

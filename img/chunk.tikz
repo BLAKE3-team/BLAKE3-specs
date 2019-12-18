@@ -1,0 +1,83 @@
+\begin{tikzpicture}[
+comp/.style={draw, trapezium, trapezium left angle=0, trapezium right angle=45, shape border rotate=270, minimum height=0.5cm, minimum width=1.5cm, trapezium stretches=false,anchor=north},
+fullcomp/.style={draw, rectangle, minimum height=1.5cm, minimum width=0.75cm, trapezium stretches=false,anchor=north},
+]
+
+\begin{scope}[xshift=0cm]
+\node[comp] (f0) {$F$};
+\node[above=0.5cm of f0] (m0) {$m_0$};
+\coordinate (tmp) at ($(f0.north west) + (-0.5cm, -0.25cm)$);
+\node[below = 0.00cm of tmp,scale=0.50,anchor=east] (iv) {$\mathrm{IV}$};
+\node[below = 0.33cm of tmp,scale=0.50,anchor=east] (t0) {$t=0$};
+\node[below = 0.66cm of tmp,scale=0.50,anchor=east] (b0) {$b=64$};
+\node[below = 0.99cm of tmp,scale=0.50,anchor=east] (d0) {$d=2^0$};
+
+\draw[-latex] (m0) -- (f0);
+\draw[-latex] (iv) -- (iv -| f0.west);
+\draw[-latex] (t0) -- (t0 -| f0.west);
+\draw[-latex] (b0) -- (b0 -| f0.west);
+\draw[-latex] (d0) -- (d0 -| f0.west);
+\end{scope}
+
+\begin{scope}[xshift=3cm]
+\node[comp] (f1) {$F$};
+\node[above=0.5cm of f1] (m1) {$m_1$};
+\coordinate (tmp) at ($(f1.north west) + (-0.5cm, -0.25cm)$);
+
+\node[below = 0.33cm of tmp,scale=0.5,anchor=east] (t1) {$t=0$};
+\node[below = 0.66cm of tmp,scale=0.5,anchor=east] (b1) {$b=64$};
+\node[below = 0.99cm of tmp,scale=0.5,anchor=east] (d1) {$d=0$};
+
+\draw[-latex] (m1) -- (f1);
+\draw[-latex] (t1) -- (t1 -| f1.west);
+\draw[-latex] (b1) -- (b1 -| f1.west);
+\draw[-latex] (d1) -- (d1 -| f1.west);
+\end{scope}
+
+\begin{scope}[xshift=6cm]
+\node[fullcomp] (f2) {$F$};
+\node[above=0.5cm of f2] (m2) {$m_2$};
+\coordinate (tmp) at ($(f2.north west) + (-0.5cm, -0.25cm)$);
+
+\node[below = 0.33cm of tmp,scale=0.5,anchor=east] (t2) {$t=0$};
+\node[below = 0.66cm of tmp,scale=0.5,anchor=east] (b2) {$b=53$};
+\node[below = 0.99cm of tmp,scale=0.5,anchor=east] (d2) {$d=2^1+2^3$};
+
+\draw[-latex] (m2) -- (f2);
+\draw[-latex] (t2) -- (t2 -| f2.west);
+\draw[-latex] (b2) -- (b2 -| f2.west);
+\draw[-latex] (d2) -- (d2 -| f2.west);
+\end{scope}
+
+\begin{scope}[xshift=6cm,yshift=-3cm]
+\node[fullcomp] (f3) {$F$};
+\node[above=0.5cm of f3] (m3) {$m_2$};
+\coordinate (tmp) at ($(f3.north west) + (-0.5cm, -0.25cm)$);
+
+\node[below = 0.33cm of tmp,scale=0.5,anchor=east] (t3) {$t=1$};
+\node[below = 0.66cm of tmp,scale=0.5,anchor=east] (b3) {$b=53$};
+\node[below = 0.99cm of tmp,scale=0.5,anchor=east] (d3) {$d=2^1+2^3$};
+
+\draw[-latex] (m3) -- (f3);
+\draw[-latex] (t3) -- (t3 -| f3.west);
+\draw[-latex] (b3) -- (b3 -| f3.west);
+\draw[-latex] (d3) -- (d3 -| f3.west);
+\end{scope}
+
+\coordinate (tmp) at (f1.west |- iv);
+\coordinate (tmp2) at ($(f0)!0.40!(f1)$);
+\draw[-latex] (f0) -- (f0 -| tmp2) -- (tmp2 |- tmp) -- (tmp);
+\coordinate (tmp) at (f2.west |- iv);
+\coordinate (tmp2) at ($(f1)!0.40!(f2)$);
+\draw[-latex] (f1) -- (f1 -| tmp2) -- (tmp2 |- tmp) -- (tmp);
+
+\coordinate (tmp) at ($(f3.north west) + (-0cm, -0.25cm)$);
+\coordinate (tmp2) at ($(f1.east) + (0.5cm, 0)$);
+\draw[-latex] (f1.east) -- (tmp2) -- (tmp2 |- tmp) -- (tmp);
+
+\node[right=0.5cm of f2] (out) {$h_0$};
+\draw[-latex] (f2) -- (out);
+\node[right=0.5cm of f3] (out) {$h_1$};
+\draw[-latex] (f3) -- (out);
+
+\end{tikzpicture}

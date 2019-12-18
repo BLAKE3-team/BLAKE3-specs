@@ -1,0 +1,41 @@
+\begin{tikzpicture}
+
+\node[draw,rectangle] (chunk1) at (0, 0) {$c_0$};
+
+%%
+
+\node[draw,rectangle,right=1cm of chunk1] (chunk2) {$c_0$};
+\node[draw,rectangle,right=0.5cm of chunk2] (chunk3) {$c_1$};
+\node[draw,rectangle,above=1cm of chunk2] (parent1) at ($(chunk2)!0.5!(chunk3)$) {\phantom{$p_0$}};
+\draw[-latex] (chunk2) -- (parent1);
+\draw[-latex] (chunk3) -- (parent1);
+
+%%
+
+\node[draw,rectangle,right=1cm of chunk3] (chunk2) {$c_0$};
+\node[draw,rectangle,right=0.5cm of chunk2] (chunk3) {$c_1$};
+\node[draw,rectangle,above=1cm of chunk2] (parent1) at ($(chunk2)!0.5!(chunk3)$) {\phantom{$p_0$}};
+\node[draw,rectangle,right=0.5cm of parent1] (chunk4) {$c_2$};
+\node[draw,rectangle,above=1cm of chunk4] (parent2) at ($(parent1)!0.5!(chunk4)$) {\phantom{$p_0$}};
+\draw[-latex] (chunk2) -- (parent1);
+\draw[-latex] (chunk3) -- (parent1);
+\draw[-latex] (parent1) -- (parent2);
+\draw[-latex] (chunk4) -- (parent2);
+
+%%
+
+\node[draw,rectangle,below right=1cm of chunk4] (chunk2) {$c_0$};
+\node[draw,rectangle,right=0.5cm of chunk2] (chunk3) {$c_1$};
+\node[draw,rectangle,above=1cm of chunk2] (parent1) at ($(chunk2)!0.5!(chunk3)$) {\phantom{$p_0$}};
+\node[draw,rectangle,right=0.5cm of chunk3] (chunk4) {$c_2$};
+\node[draw,rectangle,right=0.5cm of chunk4] (chunk5) {$c_3$};
+\node[draw,rectangle,above=1cm of chunk4] (parent2) at ($(chunk4)!0.5!(chunk5)$) {\phantom{$p_0$}};
+\node[draw,rectangle,above=1cm of parent2] (parent3) at ($(parent1)!0.5!(parent2)$) {\phantom{$p_0$}};
+\draw[-latex] (chunk2) -- (parent1);
+\draw[-latex] (chunk3) -- (parent1);
+\draw[-latex] (chunk4) -- (parent2);
+\draw[-latex] (chunk5) -- (parent2);
+\draw[-latex] (parent1) -- (parent3);
+\draw[-latex] (parent2) -- (parent3);
+
+\end{tikzpicture}
