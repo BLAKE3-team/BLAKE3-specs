@@ -958,6 +958,56 @@ insertions and removals within a file are either slow or unsupported.
 
 \section{Rationales}\label{sec:rationales}
 
+This section goes into more detail about some of the performance tradeoffs and
+security considerations in the BLAKE3 design.
+
+\subsection{Chunk Size}\label{sec:chunksize}
+
+BLAKE3 uses 1 KiB chunks. The chunk size is a tradeoff between peak throughput
+for long inputs, which benefits from larger chunks, and the parallelism degree
+for medium-length inputs, which benefits from shorter chunks.
+
+The benefit of a larger chunk size is that the tree contains fewer parent
+nodes. The number of parent nodes is equal to the number of chunks minus one,
+so doubling the chunk size cuts the number of parent nodes in half. However,
+note that parent nodes in the same level of the tree can be compressed in
+parallel, so having twice as many parent nodes does not necessarily mean that
+the implementation spends twice as much time compressing them.
+
+On the other hand, the benefit of a smaller chunk size is that the more chunks
+there are, the more work the implementation can do in parallel. This is not a
+concern for very long inputs, where all the SIMD lanes and possibly CPU cores
+of the machine will be occupied regardless. But at medium input lengths, this
+has a huge impact on performance. Consider that with 1 KiB chunks, an 8 KiB
+input can occupy 8 SIMD lanes, which means 256-bit AVX2 vector instructions on
+modern x86 platforms. But if we increased the chunk size to 2 KiB, the same
+input could only occupy 4 SIMD lanes, and the high throughput of AVX2 would be
+left on the table.
+
+Thus we want to pick the smallest chunks size we can to maximize medium-length
+parallelism, without incurring "excessive" overhead from parent nodes for long
+inputs. In our measurements, 1 KiB chunks provide at least 90\% of the maximum
+possible throughput (that is, the throughput with 32 KiB or 64 KiB chunks,
+where parent node overhead is negligible), on both modern x86 platforms and on
+the ARM1176.
+
+There are other minor performance considerations to be aware of. A larger chunk
+size slightly reduces the size of the CV stack as described in
+\S\ref{sec:memory}. Also, verified streaming (see
+\S\ref{sec:verifiedstreaming}) requires buffering chunks, and incremental
+update (see \S\ref{sec:incrementalupdate}) requires re-hashing chunks, so both
+of those use cases benefit from a small chunk size.
+
+\subsection{Word Size}\label{sec:wordsize}
+
+\subsection{Compression Function Feed Forward}\label{sec:feedforward}
+
+\subsection{Chunk Counter}\label{sec:chunkcounter}
+
+\subsection{Tree Fanout}\label{sec:treefanout}
+
+\subsection{Domain Flags}\label{sec:domainflags}
+
 % TODO: Let me know what you guys think about having an Acknowledgments section.
 \section*{Acknowledgments}\label{sec:acknowledgments}
 
