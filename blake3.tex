@@ -1037,30 +1037,33 @@ designs supporting multiple algorithms.\cite{WG}
 
 \subsection{Compression Function Feed Forward}\label{sec:feedforward}
 
-The output step of the compression function mixes the first and second halves
-of the state, and then feeds forward the input CV into the second half. The
-feed-forward step allows us to use all 16 words of the state as output,
-doubling the output rate of the extendable output feature. If we exposed all 16
-state words without the feed-forward, the compression function would be
-reversible when the message bytes were known.
+The output step of the compression function (see \S\ref{sec:compression}) mixes
+the first and second halves of the state, and then feeds forward the input CV
+into the second half. The feed-forward step allows us to use all 16 words of
+the state as output, doubling the output rate of the extendable output feature
+(see \S\ref{sec:extendable}). If we exposed all 16 state words without the
+feed-forward, the compression function would be reversible when the message
+bytes were known.
 
 When the full output is used, mixing the first and second halves of the state
 is redundant. However, when the truncated output is used, mixing the halves
 makes the compression function slightly stronger against truncated
-differentials. The default 32-byte output size is a truncated output, the
+differentials. The default 32-byte output size is a truncated output, and
 truncated outputs are also used for chaining values in the interior of the
 tree.
 
 \subsection{Chunk Counter}\label{sec:chunkcounter}
 
 The main job of the compression function's 64-bit counter parameter, $t$, is to
-support extendable output. By incrementing $t$, the caller can extract as much
-output as needed, without imposing any extra steps on the default-length case.
+support extendable output. By incrementing $t$ (see \S\ref{sec:extendable}),
+the caller can extract as much output as needed, without imposing any extra
+steps on the default-length case.
 
 However, we also use the $t$ parameter during the input phase, to indicate the
-chunk number. This means that each chunk has a distinct CV with high
-probability, even if two chunks have the same input bytes. This is not strictly
-necessary for security, but it discourages a class of dangerous optimizations.
+chunk number (see \S\ref{sec:chunk}). This means that each chunk has a distinct
+CV with high probability, even if two chunks have the same input bytes. This is
+not strictly necessary for security, but it discourages a class of dangerous
+optimizations.
 
 Consider an application that hashes sparse files, which are mostly filled with
 zeros. The majority of this application's input chunks are the all-zero chunk.
