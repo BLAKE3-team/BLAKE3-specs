@@ -1002,36 +1002,39 @@ from a small chunk size.
 
 \subsection{Word Size}\label{sec:wordsize}
 
-BLAKE3 uses 32-bit words. The performance tradeoffs between 32-bit and 64-bit
-words are complex, and they depend on both the platorm and the size of the
-input.
+BLAKE3 uses 32-bit words. The performance tradeoffs in the choice between
+32-bit and 64-bit words are complex, and they depend on both the platform and
+the size of the input.
 
 Many sources note that SHA-512 (because it uses 64-bit words) is faster on
-64-bit machines than SHA-256 (because it uses 32-bit words). A similar effect
+64-bit platforms than SHA-256 (because it uses 32-bit words). A similar effect
 applies to BLAKE2b and BLAKE2s. However, this effect does not apply to
-algorithms that incorporate more SIMD parallelism. BLAKE2sp is faster than
-BLAKE2bp on modern x86 platforms. This is because the SIMD instructions that
+algorithms that incorporate more SIMD parallelism. BLAKE2sp has higher peak
+throughput than BLAKE2bp on x86-64. This is because the SIMD instructions that
 operate on 8 lanes of 32-bit words have the same throughput as those that
-operate on 4 lanes of 64-bit words. The remaining difference for long inputs is
-that the smaller state size of BLAKE2sp requires fewer rounds of compression.
+operate on 4 lanes of 64-bit words. The key factor for exploiting SIMD
+performance is not word size but vector size, and both of those cases occupy a
+256-bit vector. (The remaining effect making BLAKE2sp faster is that its
+smaller state requires fewer rounds of compression.)
 
-Instead, performance differences between the word sizes on x86 are restricted
-to short inputs. A 32-bit compression function takes fewer cycles than a 64-bit
-one, so inputs up to 64 bytes perform better with 32-bit words. On the other
-hand, a 64-bit compression function has higher throughput prior to multi-chunk
-parallelism kicking in, so inputs longer than 64 bytes but shorter than one
-chunk perform better with 64-bit words. Neither of these effects is likely to
-be noticeable in typical applications, which only bottleneck on hash function
-throughput for very long inputs.
+For that reason, peak throughput on x86-64 is largely independent of the word
+size. The performance differences that remain are restricted to shorter input
+lengths: 32-bit words perform better for lengths less than one block, while
+64-bit words perform better for lengths between one block and one chunk,
+comparable to BLAKE2s and BLAKE2b. These effects are minor, and short input
+performance is usually dominated by other sources of overhead in typical
+applications.
 
-The decisive difference between the word sizes, then, is performance on smaller
-architectures and embedded systems. BLAKE3 is designed to be a general-purpose
-hash function, suitable for replacing both BLAKE2b and BLAKE2s. On platforms
-like the ARM1176 where BLAKE2s does well, a 64-bit hash function could be a
-performance regression. Choosing 32-bit words is a substantial benefit for
-these platforms, with little or no downside for x86 implementations.
-Cross-platform flexibility is also a benefit for protocol designers, who have
-to consider the performance of an algorithm across many different platforms.
+Instead, the decisive advantage of 32-bit words over 64-bit words is
+performance on smaller architectures and embedded systems. BLAKE3 aims to be to
+be a single general-purpose hash function, suitable for replacing both BLAKE2b
+and BLAKE2s. On 32-bit platforms like the ARM1176, where BLAKE2s does
+especially well, a 64-bit hash function could be a performance regression.
+Choosing 32-bit words is a substantial benefit for these platforms, with little
+or no downside for x86-64. Cross-platform flexibility is also important for
+protocol designers, who have to consider the performance of their designs
+across a wide range of hardware, and who are becoming increasingly skeptical of
+designs supporting multiple algorithms.\cite{WG}
 
 \subsection{Compression Function Feed Forward}\label{sec:feedforward}
 
