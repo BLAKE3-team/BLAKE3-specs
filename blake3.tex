@@ -1053,6 +1053,28 @@ tree.
 
 \subsection{Chunk Counter}\label{sec:chunkcounter}
 
+The main job of the compression function's 64-bit counter parameter, $t$, is to
+support extendable output. By incrementing $t$, the caller can extract as much
+output as needed, without imposing any extra steps on the default-length case.
+
+However, we also use the $t$ parameter during the input phase, to indicate the
+chunk number. This means that each chunk has a distinct CV with high
+probability, even if two chunks have the same input bytes. This is not strictly
+necessary for security, but it discourages a class of dangerous optimizations.
+
+Consider an application that hashes sparse files, which are mostly filled with
+zeros. The majority of this application's input chunks are the all-zero chunk.
+This application might try to compute the CV of the zero chunk only once, and
+then before compressing each chunk of input, check to see whether its bytes are
+all zero. This check is cheap, and for this application it could be an enormous
+speedup. But this optimization is dangerous, because it is not constant-time.
+The runtime of the hash function would leak information about its input.
+
+If tricks like this were possible, an unsafe implementation would inevitably
+find its way into some privacy-sensitive use case. By distinguishing each
+chunk, BLAKE3 deliberately sabotages these tricks, with the hope of keeping
+every implementation constant-time.
+
 \subsection{Tree Fanout}\label{sec:treefanout}
 
 \subsection{Domain Flags}\label{sec:domainflags}
