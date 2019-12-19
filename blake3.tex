@@ -968,22 +968,21 @@ throughput for long inputs, which benefits from larger chunks, and the degree
 of parallelism for medium-length inputs, which benefits from shorter chunks.
 
 The benefit of a larger chunk size is that the tree contains fewer parent
-nodes, and the implementation spends less time compressing them. The number of
-parent nodes is equal to the number of chunks minus one, so doubling the chunk
-size cuts the number of parent nodes in half. However, note that parent nodes
-at the same level of the tree can be compressed in parallel, so having twice as
-many parent nodes does not necessarily mean that compressing them takes twice
-as much time.
+nodes, so the overhead cost of compressing them is lower. The number of parent
+nodes is equal to the number of chunks minus one, so doubling the chunk size
+cuts the number of parent nodes in half. However, note that parent nodes at the
+same level of the tree can be compressed in parallel, so having twice as many
+parent nodes does not necessarily mean that compressing them takes twice as
+long.
 
-Speaking of which, the benefit of a smaller chunk size is that the
-implementation can do more work in parallel. This is irrelevant for very long
-inputs, where all the SIMD lanes and possibly CPU cores of the machine will be
-occupied regardless. But at medium input lengths, this has a huge impact on
-performance. Consider an 8~KiB input. With a chunk size of 1~KiB, this input
-can occupy 8 SIMD lanes, which lets the implementation use AVX2 vector
-instructions on modern x86 platforms. But if we increased the chunk size to 2
-KiB, the same input would only occupy 4 SIMD lanes, and the high throughput of
-AVX2 would be left on the table.
+The benefit of a smaller chunk size is a higher potential degree of
+parallelism. This is irrelevant for very long inputs, where all the SIMD lanes
+and possibly CPU cores of the machine will be occupied regardless. But at
+medium input lengths, this has a huge impact on performance. Consider an 8~KiB
+input. With a chunk size of 1~KiB, this input can occupy 8 SIMD lanes, which
+lets the implementation use AVX2 vector instructions on modern x86 platforms.
+But if we increased the chunk size to 2 KiB, the same input would only occupy 4
+SIMD lanes, and the high throughput of AVX2 would be left on the table.
 
 Thus we want to pick the smallest chunks size we can to maximize medium-length
 parallelism, without incurring "excessive" overhead from parent nodes. The
@@ -998,7 +997,7 @@ size slightly reduces the space requirement of the CV stack as described in
 \S\ref{sec:memory}. Also, verified streaming requires buffering chunks (see
 \S\ref{sec:verifiedstreaming}), and incremental updates require re-hashing
 chunks (see \S\ref{sec:incrementalupdate}), so both of those use cases benefit
-from a small chunk size.
+from a smaller chunk size.
 
 \subsection{Word Size}\label{sec:wordsize}
 
@@ -1027,7 +1026,7 @@ applications.
 
 Instead, the decisive advantage of 32-bit words over 64-bit words is
 performance on smaller architectures and embedded systems. BLAKE3 aims to be to
-be a single general-purpose hash function, suitable for replacing both BLAKE2b
+be a single general-purpose hash function, suitable for users of both BLAKE2b
 and BLAKE2s. On 32-bit platforms like the ARM1176, where BLAKE2s does
 especially well, a 64-bit hash function could be a performance regression.
 Choosing 32-bit words is a substantial benefit for these platforms, with little
