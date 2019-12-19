@@ -1037,6 +1037,20 @@ designs supporting multiple algorithms.\cite{WG}
 
 \subsection{Compression Function Feed Forward}\label{sec:feedforward}
 
+The output step of the compression function mixes the first and second halves
+of the state, and then feeds forward the input CV into the second half. The
+feed-forward step allows us to use all 16 words of the state as output,
+doubling the output rate of the extendable output feature. If we exposed all 16
+state words without the feed-forward, the compression function would be
+reversible when the message bytes were known.
+
+When the full output is used, mixing the first and second halves of the state
+is redundant. However, when the truncated output is used, mixing the halves
+makes the compression function slightly stronger against truncated
+differentials. The default 32-byte output size is a truncated output, the
+truncated outputs are also used for chaining values in the interior of the
+tree.
+
 \subsection{Chunk Counter}\label{sec:chunkcounter}
 
 \subsection{Tree Fanout}\label{sec:treefanout}
