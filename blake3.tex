@@ -963,40 +963,42 @@ security considerations in the BLAKE3 design.
 
 \subsection{Chunk Size}\label{sec:chunksize}
 
-BLAKE3 uses 1 KiB chunks. The chunk size is a tradeoff between peak throughput
-for long inputs, which benefits from larger chunks, and the parallelism degree
-for medium-length inputs, which benefits from shorter chunks.
+BLAKE3 uses 1~KiB chunks. The chunk size is a tradeoff between the peak
+throughput for long inputs, which benefits from larger chunks, and the degree
+of parallelism for medium-length inputs, which benefits from shorter chunks.
 
 The benefit of a larger chunk size is that the tree contains fewer parent
-nodes. The number of parent nodes is equal to the number of chunks minus one,
-so doubling the chunk size cuts the number of parent nodes in half. However,
-note that parent nodes in the same level of the tree can be compressed in
-parallel, so having twice as many parent nodes does not necessarily mean that
-the implementation spends twice as much time compressing them.
+nodes, and the implementation spends less time compressing them. The number of
+parent nodes is equal to the number of chunks minus one, so doubling the chunk
+size cuts the number of parent nodes in half. However, note that parent nodes
+at the same level of the tree can be compressed in parallel, so having twice as
+many parent nodes does not necessarily mean that compressing them takes twice
+as much time.
 
-On the other hand, the benefit of a smaller chunk size is that the more chunks
-there are, the more work the implementation can do in parallel. This is not a
-concern for very long inputs, where all the SIMD lanes and possibly CPU cores
-of the machine will be occupied regardless. But at medium input lengths, this
-has a huge impact on performance. Consider that with 1 KiB chunks, an 8 KiB
-input can occupy 8 SIMD lanes, which means 256-bit AVX2 vector instructions on
-modern x86 platforms. But if we increased the chunk size to 2 KiB, the same
-input could only occupy 4 SIMD lanes, and the high throughput of AVX2 would be
-left on the table.
+Speaking of which, the benefit of a smaller chunk size is that the
+implementation can do more work in parallel. This is irrelevant for very long
+inputs, where all the SIMD lanes and possibly CPU cores of the machine will be
+occupied regardless. But at medium input lengths, this has a huge impact on
+performance. Consider an 8~KiB input. With a chunk size of 1~KiB, this input
+can occupy 8 SIMD lanes, which lets the implementation use AVX2 vector
+instructions on modern x86 platforms. But if we increased the chunk size to 2
+KiB, the same input would only occupy 4 SIMD lanes, and the high throughput of
+AVX2 would be left on the table.
 
 Thus we want to pick the smallest chunks size we can to maximize medium-length
-parallelism, without incurring "excessive" overhead from parent nodes for long
-inputs. In our measurements, 1 KiB chunks provide at least 90\% of the maximum
-possible throughput (that is, the throughput with 32 KiB or 64 KiB chunks,
-where parent node overhead is negligible), on both modern x86 platforms and on
-the ARM1176.
+parallelism, without incurring "excessive" overhead from parent nodes. The
+point of comparison here is the peak throughput for a very large chunk size,
+like 64~KiB, where parent node overhead becomes small enough to be negligible.
+In our measurements, we find that implementations with 1~KiB chunks can reach
+at least 90\% of that peak throughput on both modern x86 platforms and on the
+ARM1176.
 
 There are other minor performance considerations to be aware of. A larger chunk
-size slightly reduces the size of the CV stack as described in
-\S\ref{sec:memory}. Also, verified streaming (see
-\S\ref{sec:verifiedstreaming}) requires buffering chunks, and incremental
-update (see \S\ref{sec:incrementalupdate}) requires re-hashing chunks, so both
-of those use cases benefit from a small chunk size.
+size slightly reduces the space requirement of the CV stack as described in
+\S\ref{sec:memory}. Also, verified streaming requires buffering chunks (see
+\S\ref{sec:verifiedstreaming}), and incremental updates require re-hashing
+chunks (see \S\ref{sec:incrementalupdate}), so both of those use cases benefit
+from a small chunk size.
 
 \subsection{Word Size}\label{sec:wordsize}
 
