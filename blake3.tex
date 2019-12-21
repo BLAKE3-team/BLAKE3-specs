@@ -1080,6 +1080,62 @@ every implementation constant-time.
 
 \subsection{Tree Fanout}\label{sec:treefanout}
 
+BLAKE3 uses a binary tree structure, which is to say a fanout of 2. A binary
+tree is simpler to implement than a wider tree, and its memory requirement is
+also a local minimum.
+
+The CV stack algorithm described in \S\ref{sec:cvstack} is important for
+simplifying a BLAKE3 implementation. It also saves space, because the
+implementation does not need to store size or level metadata along with each
+CV. Consider how this algorithm would change, if BLAKE3 used a fanout of 4.
+Instead of "count the 1 bits in a binary number," it would be "sum all the
+digits of a quaternary number." The former is relatively familiar to
+programmers and commonly supported by language libraries and hardware
+instruction sets. But the latter is harder to understand, and each
+implementation would need to add code for it. Other complexities would crop up
+as well: parent nodes would no longer be a fixed size, and new ambiguities in
+the tree layout would require a third rule in \S\ref{sec:tree} along the lines
+of "all non-rightmost sibling subtrees are the same size."
+
+A fanout of 4 would also would also increase the memory requirement of the CV
+stack. Instead of storing one CV per level of the tree, we would need to store
+three. The tree would be half as tall, but ultimately the CV stack would be
+larger by a factor of $3/2$. In general, the size of the CV stack for a fanout
+$F$ is proportional to $(F-1)/log_2(F)$, which increases as $F$ increases.
+
+A different approach to the CV stack is possible, however, which could save
+space at larger fanouts. Rather than storing CV bytes directly, the
+implementation could store an incremental state for each incomplete parent
+node, similar to the incremental chunk state. An incremental state requires a
+32-byte CV and a 64-byte buffer, so at fanout 4 it would be no better than
+storing 96 CV bytes directly. (Perhaps the 64-byte buffer could be reduced to
+32 bytes in some cases, depending on the details of parent node finalization,
+and at the cost of more complexity.) But at higher fanouts, the memory
+requirement would be proportional to $1/log_2(F)$. At fanout 16 and above, this
+approach could save space relative to the binary tree.
+
+Recall from \S\ref{sec:memory} that space-constrained implementations of BLAKE3
+can reduce the size of the CV stack by restricting their maximum input length.
+We expect that the majority of space-constrained applications already have
+limits on the size of their input. Indeed it is hard to imagine how an
+application without 2 KB of memory to spare could even get its hands on a
+gigabyte of input. Realistically, a large fanout would only benefit a tiny
+fringe of space-constrained yet wildly ambitious applications, but the added
+complexity would hurt everyone.
+
+As a special case, we could also have chosen an infinite fanout, a single
+parent node with an unlimited number of leaves. This approach does not require
+a CV stack at all. Instead, the implementation only needs to manage the
+incremental state of the current chunk and the incremental state of the single
+parent node. Notably, this is the approach taken by the KangarooTwelve hash
+function. It has large benefits for simplicity and space efficiency, but also
+several downsides. Parent nodes cannot be compressed in parallel, requiring a
+larger chunk size to keep overhead low (see \S\ref{sec:chunksize}).
+Multi-threading is more complex and generally requires heap allocation, because
+the input cannot be split in half recursively (see \S\ref{sec:multithreading}).
+And incremental use cases like verified streaming (see
+\S\ref{sec:verifiedstreaming}) are no longer practical.
+
 \subsection{Domain Flags}\label{sec:domainflags}
 
 % TODO: Let me know what you guys think about having an Acknowledgments section.
