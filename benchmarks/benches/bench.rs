@@ -23,18 +23,6 @@ fn benchmarks(c: &mut Criterion) {
         },
         params,
     );
-    // This C implementation is generally slower than the Rust one for short
-    // inputs, because it does more copying and less inlining. But Rust doesn't
-    // yet support AVX-512 or NEON.
-    #[cfg(feature = "c_detect")]
-    let b = b.with_function("blake3_c", |b, param| {
-        let mut input = RandomInput::new(*param);
-        b.iter(|| {
-            let mut hasher = blake3::c::Hasher::new(&[0; 32], 0);
-            hasher.update(input.get());
-            hasher.finalize()
-        })
-    });
     let b = b
         .with_function("blake2b", |b, param| {
             let mut input = RandomInput::new(*param);
