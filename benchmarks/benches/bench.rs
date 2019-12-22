@@ -18,6 +18,7 @@ fn benchmarks(c: &mut Criterion) {
         params.push(len * 7 / 4);
         len *= 2;
     }
+    params.push(MAX_LEN);
 
     let b = ParameterizedBenchmark::new(
         "blake3",
