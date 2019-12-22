@@ -46,15 +46,29 @@ SIZES = [
 ]
 
 
+def dense_sizes():
+    sizes = []
+    for (size, _) in SIZES[:-1]:
+        sizes.append(size)
+        sizes.append(size * 5 // 4)
+        sizes.append(size * 6 // 4)
+        sizes.append(size * 7 // 4)
+    sizes.append(SIZES[-1][0])
+    return sizes
+
+
 def main():
     target = Path(sys.argv[1])
-    names = []
-    throughputs = []
+    sizes_map = dict(SIZES)
+    hash_names = []
     sizes = []
+    ticks = []
+    tick_names = []
+    throughputs = []
     for hash_name, hash_name_pretty in HASH_NAMES:
-        names.append(hash_name_pretty)
+        hash_names.append(hash_name_pretty)
         hash_dir = target / "bench_group" / hash_name
-        for size_i, (size, size_pretty) in enumerate(SIZES):
+        for size_i, size in enumerate(dense_sizes()):
             estimates_path = hash_dir / str(size) / "new/estimates.json"
             try:
                 estimates = json.load(estimates_path.open())
@@ -67,12 +81,14 @@ def main():
             # upper = slope["confidence_interval"]["upper_bound"]
             # lower = slope["confidence_interval"]["lower_bound"]
             mbps_throughput = size / point * 1000
-            if len(sizes) == size_i:
-                sizes.append(size_pretty)
             if len(throughputs) == size_i:
                 throughputs.append([])
+                sizes.append(size)
+                if size in sizes_map:
+                    ticks.append(size)
+                    tick_names.append(sizes_map[size])
             throughputs[size_i].append(mbps_throughput)
-    dataframe = pandas.DataFrame(throughputs, sizes, names)
+    dataframe = pandas.DataFrame(throughputs, sizes, hash_names)
 
     seaborn.set()
     # pyplot.rcParams["axes.labelsize"] = 20
@@ -91,10 +107,11 @@ def main():
         sort=False,
         dashes=dash_styles,
     )
-    plot.set(ylabel="Throughput (MB/s)\n")
+    plot.set(ylabel="Throughput (MB/s)\n", xscale="log")
     pyplot.legend(loc="best", framealpha=1)
     # pyplot.legend(loc="lower right", framealpha=1)
-    plot.set_xticklabels(sizes, rotation=270)
+    plot.set(xticks=ticks)
+    plot.set_xticklabels(tick_names, rotation=270)
     # pyplot.savefig(target.with_suffix(".pgf"), bbox_inches="tight")
     pyplot.show()
 
