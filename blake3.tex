@@ -1136,6 +1136,17 @@ the input cannot be split in half recursively (see \S\ref{sec:multithreading}).
 And incremental use cases like verified streaming (see
 \S\ref{sec:verifiedstreaming}) are no longer practical.
 
+As a totally different approach, we could also have chosen a fixed-interleaved
+tree layout similar to that of BLAKE2bp and BLAKE2sp. For example, BLAKE2sp
+divides its input into 8 interleaved pieces, with blocks 0, 8, 16... forming
+the first piece, blocks 1, 9, 17... forming the second piece, and so on. The 8
+resulting CVs are then concatenated into a single parent node. The upsides of
+this approach are that full parallelism can begin at relatively short input
+lengths, 512 bytes in the case of BLAKE2bp and BLAKE2sp, and that the memory
+requirement is lower than that of the binary tree. The downsides of this
+approach are that the degree of parallelism is fixed, and that performance is
+poor for shorter inputs.
+
 \subsection{Domain Flags}\label{sec:domainflags}
 
 The \flag{ROOT} and \flag{CHUNK_START} domain flags are necessary for security.
