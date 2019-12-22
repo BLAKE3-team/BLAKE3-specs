@@ -610,13 +610,15 @@ See~\cite{TMC}.
 
 \subsection{Incremental Hashing}\label{sec:incremental}
 
-An incremental implementation of BLAKE3 needs two major components: the state
-of the current chunk and a stack of subtree chaining values (the ``CV stack'').
+An incremental implementation of BLAKE3 has two major components: the state of
+the current chunk and a stack of subtree chaining values (the ``CV stack'').
 The chunk state is structurally similar to an incremental implementation of the
-sequential mode of BLAKE2. Simplifying the management of the CV stack is
-especially important for a concise and correct implementation of BLAKE3. This
-section is best read together with
-\href{https://github.com/veorq/BLAKE3/blob/master/reference_impl/reference_impl.rs}{the code of the reference implementation}.
+sequential mode of BLAKE2, and it will be familiar to implementers of other
+hash functions. The CV stack is less familiar. Simplifying the management of
+the CV stack is especially important for a clear and correct implementation of
+BLAKE3. This section goes into detail about how this is done in the
+\href{https://github.com/veorq/BLAKE3/blob/master/reference_impl/reference_impl.rs}{reference
+implementation}, as an aid to implementers.
 % TODO: repoint this to BLAKE3-team and a specific tag
 
 \subsubsection{Chunk State}\label{sec:chunkstate}
@@ -640,15 +642,10 @@ below: chunk CVs are added to the stack only after the caller supplies at least
 
 To help picture the role of the CV stack, Figure~\ref{fig:incrementaltrees}
 shows a growing tree as chunk CVs are added incrementally. As just discussed
-above, chunk CVs are added only after the caller has supplied at least 1 byte
-for the following chunk, so we know that these chunks and parent nodes are not
-the root of the tree, and we do not need to worry about the \flag{ROOT} flag
-yet. When the first chunk CV is added, $c_0$, it is alone. When the second
-chunk CV is added, $c_1$, it completes a subtree of size 2, and we can compute
-the first parent CV, $p_0$. The third chunk CV, $c_2$, does not complete any
-subtrees. The fourth chunk CV, $c_3$, completes two subtrees, one of size 2 and
-one of size 4. First it joins with $c_2$ giving a new parent CV, $p_1$. Then
-$p_1$ joins with $p_0$, giving $p_2$.
+above, chunk CVs are added to this tree only after the caller has supplied at
+least 1 byte for the following chunk, so we know that none of these chunks or
+parent nodes is the root of the tree, and we do not need to worry about the
+\flag{ROOT} flag yet.
 
 \begin{figure}[h]
 \centering
@@ -658,54 +655,85 @@ $p_1$ joins with $p_0$, giving $p_2$.
 \label{fig:incrementaltrees}
 \end{figure}
 
-Note that once a subtree is complete, none of its child CVs need to be stored
-any longer. We store the CVs that we still need in the CV stack. We can look
-through Figure~\ref{fig:incrementaltrees} again, this time focusing on the
-solid and dotted boxes, with dotted boxes representing the CVs that no longer
-need to be stored. When $c_0$ is alone, it is the only entry in the CV stack.
-When $c_1$ is added, $c_0$ is removed from the stack and merged into $p_0$, and
-$p_0$ becomes the only entry. When $c_2$ is added, both $p_0$ and $c_2$ remain
-in the stack. When $c_3$ is added, $c_2$ and $p_0$ are both removed and merged
-into $p_2$, and $p_2$ is the only entry that remains. In this sense, $c_1$,
-$c_3$, and $p_1$ are never directly stored in the stack.
+When the first chunk CV ($c_0$) is added, it is alone. When the second chunk CV
+($c_1$) is added, it completes a two-chunk subtree, and we can compute the
+first parent CV ($p_0$). The third chunk CV ($c_2$) does not complete any
+subtrees. Its final position in the tree structure will depend on whether it
+gets a right sibling (see Figure~\ref{fig:fourchunks}), so we cannot create any
+parent nodes for it yet. The fourth chunk CV ($c_3$) provides a right sibling
+for $c_2$ and completes two subtrees, one of two chunks and one of four chunks.
+First it merges with $c_2$ to compute $p_1$, then $p_1$ merges with $p_0$ to
+compute $p_2$.
 
-Thus the key question for managing the CV stack is, when a new chunk CV is
-added, how many subtrees does it complete? Which is to say, how many CVs should
-we pop off the stack and merge with it first?
+Note that once a subtree is complete, none of its child CVs will be used again,
+and we do not need to store them any longer. These unneeded CVs are represented
+by dotted boxes in Figure~\ref{fig:incrementaltrees}. Solid boxes represent CVs
+that are still needed. These are what we store in the CV stack, ordered based
+on when we computed them, with newer CVs on top.
 
-To answer that question, note the following invariant. At each step, the number
-of CVs remaining in the stack is the same as the number of 1 bits in the binary
-representation of the total number of chunks so far. With one chunk in the tree
-(0b001), the stack contains one CV. With two chunks in the tree (0b010), the
-stack still contains one CV. With three chunks in the tree (0b011), the stack
-now contains two CVs. And with four chunks in the tree (0b100), the stack once
-again contains one CV. When we eventually reach seven chunks (0b111), the stack
-will contain three CVs.
+Look through Figure~\ref{fig:incrementaltrees} again, this time paying
+attention to the state of the CV stack at each step. When $c_0$ is added to the
+tree, it is the only entry in the stack. When $c_1$ is added, we pop $c_0$ off
+the stack to merge it, and $p_0$ becomes the only entry. When $c_2$ is added,
+there are two entries in the stack, with $c_2$ on top because it is newer. When
+$c_3$ is added, we perform two merges, first popping off $c_2$ and then popping
+off $p_0$, and only $p_2$ remains in the stack.
 
-\alert{To understand why this works, decompose the number of chunks hashed so far in its base 2 form: $b_0\cdot 2^0 + b_1\cdot 2^1 + \dots + b_{63}\cdot 2^{63}$. Each $b_i \ne 0$ corresponds to a full power-of-2 subtree that has been completed and whose CV can be stored without its children. (Saying the same as above, but powers of 2 make it seem less magical than bits.)}
+Note how the stack order of $c_2$ and $p_0$ above matched the order in which we
+needed to retrieve them for merging. By ordering CVs in the stack from newest
+at the top to oldest at the bottom, we also implicitly order them from
+tree-right to tree-left, and from the smallest subtree so far to the largest
+subtree so far. This invariant means that the next CV we need to merge is
+always on top of the stack.
 
-This invariant leads to an algorithm for adding a chunk CV to the stack:
-Continue popping CVs off the stack to form new parent nodes, as long as the
-number of entries in the stack is greater than or equal to the number of 1 bits
-in the new total number of chunks.
+The key question is then, when a new chunk CV is added to the tree, how many
+subtrees does it complete? Which is to say, how many CVs should we pop off the
+stack and merge with it, before pushing on the final result?
+
+To answer this question, note another pattern. The entries in the CV stack
+behave like the 1 bits in the binary representation of the total number of
+chunks so far. For example with 3 chunks (0b11), there are two entries in the
+stack, corresponding to the two 1 bits. With 4 chunks (0b100), only one entry
+remains, corresponding to the single 1 bit.
+
+To see why this pattern holds, note that all the completed subtrees represented
+by CVs in the stack contain a number of chunks that is a power of 2.
+Furthermore, each subtree is a distinct power of 2, because when we have two
+subtrees of the same size, we always merge them. Thus, the subtrees in the
+stack correspond to the distinct powers of 2 that sum up to the current total
+number of chunks. This is equivalent to the 1 bits in the binary representation
+of that number.
+
+In this sense, popping a CV off the stack to merge it is like flipping a 1 bit
+to 0, and pushing the final result back onto the stack is like flipping a 0 bit
+to 1. The fact that we do two merges when adding the fourth chunk, corresponds
+to the fact that two 1 bits flip to 0 as the total changes from 3 to 4. Or in
+other words, we do two merges when we add the fourth chunk, because there are
+two trailing 1 bits in the number 3.
+
+This pattern leads to an algorithm for adding a new chunk CV to the tree: For
+each trailing 1 bit in the previous total number of chunks, pop a CV off the
+stack, and merge it with the new CV we were about to add. Finally, push the
+fully merged result onto the stack.
 Listing~\ref{listing:push_chunk_chaining_value} shows this algorithm as it
 appears in the Rust reference implementation.
 
 \begin{listing}[h]
 \begin{minted}[fontsize=\footnotesize]{rust}
-fn push_chunk_chaining_value(&mut self, mut cv: [u32; 8], total_chunks: u64) {
-    // The new chunk chaining value might complete some subtrees along the
-    // right edge of the growing tree. For each completed subtree, pop its
-    // left child CV off the stack and compress a new parent CV. After as
-    // many parent compressions as possible, push the new CV onto the
-    // stack. The final length of the stack will be the count of 1 bits in
-    // the total number of chunks so far.
-    let final_stack_len = total_chunks.count_ones() as u8;
-    while self.cv_stack_len >= final_stack_len {
-        cv = parent_output(&self.pop_stack(), &cv, &self.key, self.chunk_state.flags)
-            .chaining_value();
+fn add_chunk_chaining_value(&mut self, mut new_cv: [u32; 8], mut previous_total: u64) {
+    // This chunk might complete some subtrees. For each completed subtree,
+    // its left child will be the current top entry in the CV stack, and
+    // its right child will be the current value of `new_cv`. Pop each left
+    // child off the stack, merge it with `new_cv`, and overwrite `new_cv`
+    // with the result. After all these merges, push the resulting value of
+    // `new_cv` onto the CV stack. The number of merges we need to do is
+    // the same as the number of trailing 1 bits in the previous total
+    // number of chunks.
+    while previous_total & 1 == 1 {
+        new_cv = parent_cv(self.pop_stack(), new_cv, self.key, self.flags);
+        previous_total >>= 1;
     }
-    self.push_stack(&cv);
+    self.push_stack(new_cv);
 }
 \end{minted}
 \caption{The algorithm in the Rust reference implementation that manages the
@@ -713,14 +741,13 @@ fn push_chunk_chaining_value(&mut self, mut cv: [u32; 8], total_chunks: u64) {
 \label{listing:push_chunk_chaining_value}
 \end{listing}
 
-Once the caller indicates that the input is complete, the current chunk is
-finalized, and the new chunk CV is merged with each entry in the CV stack from
-top to bottom. This happens regardless of the number of chunks so far,
-reflecting the fact that subtrees along the right edge of the tree may be
-incomplete. The last parent node compression in this case sets the
-\flag{ROOT} flag. Or if there are no CVs in the stack, and thus no parent
-nodes to compress, finalization of the last (and only) chunk sets the
-\flag{ROOT} flag.
+Once the caller indicates that the input is complete, we compute the CV of the
+current chunk, which may be incomplete or empty. We then merge this CV with
+each CV in the current CV stack. This happens regardless of the number of
+chunks so far, reflecting the fact that subtrees along the right edge of the
+tree may be incomplete. We set the \flag{ROOT} flag for the last parent node in
+this process. Or if there are no CVs in the stack, and thus no parents to
+merge, we set the \flag{ROOT} flag for the chunk.
 
 \subsection{Multi-threading}\label{sec:multithreading}
 
