@@ -1,7 +1,9 @@
 #! /usr/bin/env python3
 
 import json
+import math
 from matplotlib import pyplot
+import os
 from pathlib import Path
 import pandas
 import seaborn
@@ -57,7 +59,25 @@ def dense_sizes():
     return sizes
 
 
+def throughput_min_max(throughputs):
+    return min(min(v) for v in throughputs), max(max(v) for v in throughputs)
+
+
+def throughput_log_ticks(throughputs):
+    min_t = min(min(v) for v in throughputs)
+    max_t = max(max(v) for v in throughputs)
+    tick = 2**math.ceil(math.log2(max_t))
+    ticks = [tick]
+    while tick > min_t:
+        tick /= 2
+        ticks.append(int(tick) if tick >= 1 else tick)
+    return ticks
+
+
 def main():
+    freq_mhz = None
+    if "BENCH_FREQ_MHZ" in os.environ:
+        freq_mhz = int(os.environ["BENCH_FREQ_MHZ"])
     target = Path(sys.argv[1])
     sizes_map = dict(SIZES)
     hash_names = []
@@ -81,13 +101,18 @@ def main():
             # upper = slope["confidence_interval"]["upper_bound"]
             # lower = slope["confidence_interval"]["lower_bound"]
             mbps_throughput = size / point * 1000
+            if freq_mhz is not None:
+                cpb_throughput = freq_mhz / mbps_throughput
             if len(throughputs) == size_i:
                 throughputs.append([])
                 sizes.append(size)
                 if size in sizes_map:
                     ticks.append(size)
                     tick_names.append(sizes_map[size])
-            throughputs[size_i].append(mbps_throughput)
+            if freq_mhz is not None:
+                throughputs[size_i].append(cpb_throughput)
+            else:
+                throughputs[size_i].append(mbps_throughput)
     dataframe = pandas.DataFrame(throughputs, sizes, hash_names)
 
     seaborn.set()
@@ -95,7 +120,6 @@ def main():
     # pyplot.rcParams["pgf.rcfonts"] = False
     # pyplot.rcParams["font.family"] = "serif"
     # pyplot.figure(figsize=[20, 10])
-    pyplot.ylim(0, 1.1 * max(max(col) for col in throughputs))
     seaborn.set_context("paper")
     # seaborn.set_context("talk")
     dash_styles = [
@@ -107,7 +131,16 @@ def main():
         sort=False,
         dashes=dash_styles,
     )
-    plot.set(ylabel="Throughput (MB/s)\n", xscale="log")
+    if freq_mhz is not None:
+        plot.set(ylabel="Throughput (cpb)\n")
+        plot.set(yscale="log")
+        yticks = throughput_log_ticks(throughputs)
+        plot.set(yticks=yticks)
+        plot.set_yticklabels(yticks)
+    else:
+        plot.set(ylabel="Throughput (MB/s)\n")
+        pyplot.ylim(0, 1.1 * max(max(col) for col in throughputs))
+    plot.set(xscale="log")
     pyplot.legend(loc="best", framealpha=1)
     # pyplot.legend(loc="lower right", framealpha=1)
     plot.set(xticks=ticks)
