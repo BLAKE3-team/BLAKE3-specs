@@ -10,8 +10,12 @@ criterion_main!(cg);
 fn benchmarks(c: &mut Criterion) {
     let mut params = Vec::new();
     let mut len = MIN_LEN;
-    while len <= MAX_LEN {
+    while len < MAX_LEN {
+        // Add points in the middle, so we measure the sawtooth curve.
         params.push(len);
+        params.push(len * 5 / 4);
+        params.push(len * 6 / 4);
+        params.push(len * 7 / 4);
         len *= 2;
     }
 
