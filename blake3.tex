@@ -707,31 +707,30 @@ of that number.
 In this sense, popping a CV off the stack to merge it is like flipping a 1 bit
 to 0, and pushing the final result back onto the stack is like flipping a 0 bit
 to 1. The fact that we do two merges when adding the fourth chunk, corresponds
-to the fact that two 1 bits flip to 0 as the total changes from 3 to 4. Or in
+to the fact that two 1 bits flip to 0 as the total changes from 3 to 4. In
 other words, we do two merges when we add the fourth chunk, because there are
-two trailing 1 bits in the number 3.
+two trailing 1 bits in the number 3, and similarly two trailing 0 bits in the
+number 4.
 
 This pattern leads to an algorithm for adding a new chunk CV to the tree: For
-each trailing 1 bit in the previous total number of chunks, pop a CV off the
-stack, and merge it with the new CV we were about to add. Finally, push the
-fully merged result onto the stack.
-Listing~\ref{listing:push_chunk_chaining_value} shows this algorithm as it
-appears in the Rust reference implementation.
+each trailing 0 bit in the new total number of chunks, pop a CV off the stack,
+and merge it with the new CV we were about to add. Finally, push the fully
+merged result onto the stack. Listing~\ref{listing:push_chunk_chaining_value}
+shows this algorithm as it appears in the Rust reference implementation.
 
 \begin{listing}[h]
 \begin{minted}[fontsize=\footnotesize]{rust}
-fn add_chunk_chaining_value(&mut self, mut new_cv: [u32; 8], mut previous_total: u64) {
+fn add_chunk_chaining_value(&mut self, mut new_cv: [u32; 8], mut total_chunks: u64) {
     // This chunk might complete some subtrees. For each completed subtree,
     // its left child will be the current top entry in the CV stack, and
     // its right child will be the current value of `new_cv`. Pop each left
     // child off the stack, merge it with `new_cv`, and overwrite `new_cv`
-    // with the result. After all these merges, push the resulting value of
-    // `new_cv` onto the CV stack. The number of merges we need to do is
-    // the same as the number of trailing 1 bits in the previous total
-    // number of chunks.
-    while previous_total & 1 == 1 {
+    // with the result. After all these merges, push the final value of
+    // `new_cv` onto the stack. The number of completed subtrees is given
+    // by the number of trailing 0 bits in the new total number of chunks.
+    while total_chunks & 1 == 0 {
         new_cv = parent_cv(self.pop_stack(), new_cv, self.key, self.flags);
-        previous_total >>= 1;
+        total_chunks >>= 1;
     }
     self.push_stack(new_cv);
 }
@@ -1151,14 +1150,14 @@ The CV stack algorithm described in \S\ref{sec:cvstack} is important for
 simplifying a BLAKE3 implementation. It also saves space, because the
 implementation does not need to store size or level metadata along with each
 CV. Consider how this algorithm would change, if BLAKE3 used a fanout of 4.
-Instead of "count the 1 bits in a binary number," it would be "sum all the
-digits in a quaternary number." The former is relatively familiar to
-programmers and commonly supported by language libraries and hardware
-instruction sets. But the latter is harder to understand, and each
-implementation would need to add code for it. Other complexities would crop up
-as well: parent nodes would no longer be a fixed size, and new ambiguities in
-the tree layout would require a third rule in \S\ref{sec:tree} along the lines
-of "all non-rightmost sibling subtrees are the same size."
+Instead of "count the trailing 0 bits, and pop that many CVs" it would be
+"count the trailing 0-0 bit pairs, and pop that many CV triplets." That can
+still be done with a bit mask, but programmers would need to reason about
+quaternary numbers to understand what was going on. Other complexities would
+crop up as well: parent nodes would no longer be a fixed size, and new
+ambiguities in the tree layout would require a third rule in \S\ref{sec:tree}
+along the lines of "all non-rightmost sibling subtrees have the same number of
+chunks."
 
 A fanout of 4 would also would also increase the memory requirement of the CV
 stack. Instead of storing one CV per level of the tree, we would need to store
