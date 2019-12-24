@@ -854,7 +854,7 @@ To abstract away various ways to use hash function in the Noise protocol framewo
 \end{itemize}
 Due to its zero-overhead keying and variable-length output, BLAKE3 may be adapted into a SHO quite easily. The internal state at the time $t$ is represented by a $256$-bit key $k_t$:
 \begin{itemize}
-  \item The initial key, $t_0$, is obtained as $k_0 = \text{\flag{hash}}(label)$;
+  \item The initial key, $k_0$, is obtained as $k_0 = \text{\flag{hash}}(label)$;
   \item \texttt{absorb(data)} updates the key: $k_{i+1} = \text{\flag{keyed_hash}}(k_i, data)$;
   \item \texttt{squeeze(length)} is done naturally by extending the output of the previous \texttt{absorb(data)} to more than 32 bytes\footnote{Extending the output of the last absorb entails preserving the last up to $64$ bytes of input data in memory for possibly a long time; in such cases it might be desirable to call \texttt{absorb(empty)} after each absorb call.}.
 \end{itemize}
