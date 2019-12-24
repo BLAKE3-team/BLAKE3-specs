@@ -533,19 +533,49 @@ TODO
 
 \subsection{Security Goals}\label{sec:goals}
 
-BLAKE3 targets $128$-bit security for all of its security goals. That is, $128$-bit security against (second-)preimage, collision, or differentiability attacks.
+BLAKE3 targets $128$-bit security for all of its security goals. That is, $128$-bit security against (second-)preimage, collision, or differentiability attacks. Users who need $256$-bit security can remain using BLAKE2.
 
 The key length is nevertheless $256$ bits, which is useful against multi-target or possible certificational attacks.
-
-Users who need $256$-bit security can remain using BLAKE2.
 
 On why 128-bit security is enough~\cite{TMC}.
 
 \subsection{Mode of Operation}\label{sec:mode}
 
-Indifferentiability / tree soundness stuff here~\cite{DBLP:journals/ijisec/BertoniDPA14,DBLP:journals/tosc/LuykxMN16,DBLP:journals/tosc/DaemenMA18}.
+One important aspect of any hash mode, parallel or otherwise, is its \emph{soundness}. Several works~\cite{DBLP:conf/fse/DodisRRS09,DBLP:journals/iacr/DaemenDA11,DBLP:journals/ijisec/BertoniDPA14,DBLP:journals/tosc/DaemenMA18} have studied some fairly general conditions on the requirements of the mode of operation of a hash function such that, when instantiated with an ideal compression function, block cipher, or permutation it remains indistinguishable from a random oracle. We adopt the requirements from Daemen et al.~\cite{DBLP:journals/tosc/DaemenMA18}, which are:
+\begin{itemize}
+  \item Subtree-freeness, i.e, no valid tree may be a subtree of another;
+  \item Radical-decodability, i.e., preventing collisions by ambiguity of the tree shape;
+  \item Message-completeness, i.e., the entire message can be recovered from the inputs to the primitive in question.
+\end{itemize}
 
-Explain sufficient conditions satisfied..
+\paragraph{Subtree-freeness}{
+  Subtree-freeness ensures that generalized length-extension attacks, like the ones that plagued Merkle-Damg{\aa}rd, cannot happen.
+  To ensure subtree-freeness, BLAKE3 defines the \flag{ROOT} flag, which is only set on the last compression output. Thus, for any valid tree, a valid subtree must have the same root node. There are two cases to consider here:
+  \begin{enumerate}
+    \item The \flag{ROOT} flag is combined with \flag{CHUNK_END}; in this case we are dealing with a single-chunk message, and the root nodes must be the same, as well as its parents, grandparents, etc, until we reach a \flag{CHUNK_START} node. Because both subtrees must start with \flag{CHUNK_START}, we conclude that both trees must be the same.
+    \item The \flag{ROOT} flag is applied to a parent node. Here the root node necessarily has two parents, each of which must be equal, recursing until they hit the same set of leaves marked by the \flag{CHUNK_END} flag.
+  \end{enumerate}
+}
+\paragraph{Radical-decodability}{
+  For radical-decodability, we can define the subset of final nodes. For each final node, one can define a function $\text{radical}()$ that returns a CV position for any final node. Here we have, again, two cases:
+  \begin{enumerate}
+    \item The final node has the \flag{CHUNK_END} flag set; here the radical is in the CV bits.
+    \item The final node is a parent node; here the CV comes in the message bits.
+  \end{enumerate}
+}
+\paragraph{Message-completeness}{
+  The entire input can be recovered from the message bits input to the chunks.
+}
+
+Then, by \cite[Theorem~3]{DBLP:journals/tosc/DaemenMA18}, for a distinguisher $\mathcal{D}$ of total complexity $q$ we have
+\begin{align*}
+  \mathsf{Adv}_{BLAKE3}^{\text{diff}}(\mathcal{D}) \le \frac{\binom{q}{2} + 1}{2^{256}} + \frac{\binom{q}{2}}{2^{512}} + \frac{q}{2^{256}}
+\end{align*}
+for the 256-bit output. For the full-length output, we do not have a truncated permutation, but instead a feed-forward. We remark, however, that the truncation requirement in \cite[Theorem~3]{DBLP:journals/tosc/DaemenMA18} is in place purely to prevent the distinguisher from inverting an output; as such, the feed-forward serves the same purpose as truncation, and the result still follows.
+
+\subsection{Compression Function}\label{sec:compression}
+
+
 
 \subsection{Cryptanalysis}\label{sec:cryptanalysis}
 
