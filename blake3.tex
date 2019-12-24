@@ -847,11 +847,18 @@ generally requires eight compressions.
 
 \subsection{Stateful Hash Object}\label{sec:sho}
 
-Trevor's thing: \url{https://github.com/noiseprotocol/sho_spec/blob/master/sho.md}
-
-Due to its zero-overhead keying and variable-length output, BLAKE3 may be adapted into a SHO quite easily. Let $l$ be some initial label. The initial key---the key at each step representing the SHO state---is obtained as $k_0 =\text{\flag{derive_key}}(l)$, after which we have $k_{i+1}, c_{i+1} = \text{\flag{keyed_hash}}(k_i, m_i)$, where $m_i$ is the input at step $i$, and $c_i$ is the ``squeezing'' output.
-
-This SHO should be sound as long as BLAKE3 behaves like a random function, and there are no key collisions. So up to about $2^{128}$ compression function calls.
+To abstract away various ways to use hash function in the Noise protocol framework, Trevor Perrin has suggested the notion of \emph{stateful hash objects} (SHO)~\cite{Perrin19}. A SHO is an interface with 3 methods:
+\begin{itemize}
+  \item \texttt{init(label)}: Initialize the internal state using a custom domain-separation label.
+  \item \texttt{absorb(data)}: Hashes an arbitrary number of bytes into the state.
+  \item \texttt{squeeze(length)}: Produces an arbitrary amount of pseudorandom output based on the current state.
+\end{itemize}
+Due to its zero-overhead keying and variable-length output, BLAKE3 may be adapted into a SHO quite easily. The internal state at the time $t$ is represented by a $256$-bit key $k_t$:
+\begin{itemize}
+  \item The initial key, $t_0$, is obtained as $k_0 = \text{\flag{hash}}(label)$;
+  \item \texttt{absorb(data)} updates the key: $k_{i+1} = \text{\flag{keyed_hash}}(k_i, data)$;
+  \item \texttt{squeeze(length)} is done naturally by extending the output of the previous \texttt{absorb(data)} to more than 32 bytes\footnote{Extending the output of the last absorb entails preserving the last up to $64$ bytes of input data in memory for possibly a long time; in such cases it might be desirable to call \texttt{absorb(empty)} after each absorb call.}.
+\end{itemize}
 
 \subsection{Verified Streaming}\label{sec:verifiedstreaming}
 
