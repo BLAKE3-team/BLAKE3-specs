@@ -168,9 +168,8 @@ The biggest changes from BLAKE2 to BLAKE3 are:
     \item A compression function with \textbf{fewer rounds}.
     \item A \textbf{single hash function}, with no variants or flavors.
     \item In lieu of a parameter block, an API supporting \textbf{three
-        domain-separated modes}: \flag{hash(input)},
-        \flag{keyed_hash(key, input)}, and \flag{derive_key(key,
-        context)}. These modes differ only in the internal flag bits they set.
+        domain-separated modes}: \flag{hash(input)}, \flag{keyed_hash(key,
+        input)}, and \flag{derive_key(context, key_material)}.
     \item The space formerly occupied by the parameter block is now used for
         the optional 256-bit key, so \textbf{keying is zero-cost}.
     \item BLAKE3 has built-in support for \textbf{extendable output}. Like
@@ -345,29 +344,36 @@ compression. Their names and values are given in Table~\ref{tab:flags}.
   \label{tab:flags}
   \begin{tabular}{cc}
     \toprule
-    Flag name             & Value \\ \midrule
-    \flag{CHUNK_START} & $2^0$ \\
-    \flag{CHUNK_END}   & $2^1$ \\
-    \flag{PARENT}       & $2^2$ \\
-    \flag{ROOT}         & $2^3$ \\
-    \flag{KEYED_HASH}  & $2^4$ \\
-    \flag{DERIVE_KEY}  & $2^5$ \\
+    Flag name                  & Value \\ \midrule
+    \flag{CHUNK_START}         & $2^0$ \\
+    \flag{CHUNK_END}           & $2^1$ \\
+    \flag{PARENT}              & $2^2$ \\
+    \flag{ROOT}                & $2^3$ \\
+    \flag{KEYED_HASH}          & $2^4$ \\
+    \flag{DERIVE_KEY_CONTEXT}  & $2^5$ \\
+    \flag{DERIVE_KEY_MATERIAL} & $2^6$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \subsection{Modes}\label{sec:modes}
 
-BLAKE3 defines three domain-separated modes: \flag{hash},
-\flag{keyed_hash}, and \flag{derive_key}. The modes differ from each
-other in their key words $k_{0} \ldots k_{7}$ and in the additional flags they
-set for every call to the compression function:
+BLAKE3 defines three domain-separated modes: \flag{hash}, \flag{keyed_hash},
+and \flag{derive_key}. The first two modes differ from each other in their key
+words $k_{0} \ldots k_{7}$ and in the additional flags they set for every call
+to the compression function:
 
 \begin{itemize}
-  \item \flag{hash}: $k_{0} \ldots k_{7}$ are the constants $\IV_0 \ldots \IV_7$, and no additional flags are set. 
-  \item \flag{keyed_hash}: $k_{0} \ldots k_{7}$ are parsed in little-endian order from the 32-byte key given by the caller, and the \flag{KEYED_HASH} flag is set for every compression.
-  \item \flag{derive_key}: the key is again given by the caller, and the \flag{DERIVE_KEY} flag is set for every compression.
+  \item \flag{hash}: $k_0 \ldots k_7$ are the constants $\IV_0 \ldots \IV_7$, and no additional flags are set. 
+  \item \flag{keyed_hash}: $k_0 \ldots k_7$ are parsed in little-endian order from the 32-byte key given by the caller, and the \flag{KEYED_HASH} flag is set for every compression.
 \end{itemize}
+
+The third mode, \flag{derive_key}, has two stages. First the context string is
+hashed, with $k_0 \ldots k_7$ set to the constants $\IV_0 \ldots \IV_7$, and
+the \flag{DERIVE_KEY_CONTEXT} flag set for every compression. Then the key
+material is hashed, with $k_0 \ldots k_7$ set to the first 8 output words of
+the first stage, and the \flag{DERIVE_KEY_MATERIAL} flag set for every
+compression.
 
 \subsection{Chunk Chaining Values}\label{sec:chunk}
 
@@ -866,39 +872,73 @@ incremental processing features.
 
 \subsection{Pseudorandom Function and MAC}\label{sec:mac}
 
-Like BLAKE2, BLAKE3 has explicit support for a keyed mode,
-\flag{keyed_hash}. This removes the need for a separate construction like
-HMAC. The \flag{keyed_hash} mode is also more efficient than keyed BLAKE2 or
-HMAC for short messages. BLAKE2 requires an extra compression for the key
-block, and HMAC requires three extra compressions. The \flag{keyed_hash}
-mode in BLAKE3 does not require any extra compressions.
+Like BLAKE2, BLAKE3 provides a keyed mode, \flag{keyed_hash}. This removes the
+need for a separate construction like HMAC. The \flag{keyed_hash} mode is also
+more efficient than keyed BLAKE2 or HMAC for short messages. BLAKE2 requires an
+extra compression for the key block, and HMAC requires three extra
+compressions. The \flag{keyed_hash} mode in BLAKE3 does not require any extra
+compressions.
 
 \subsection{Key Derivation}\label{sec:kdf}
 
-BLAKE3 has explicit support for a key derivation mode, \flag{derive_key}. In
-this mode the input bytes should be a hardcoded, globally unique context
-string. A good default format for such strings is \texttt{"[application] [date]
-[purpose]"}, e.g., \texttt{"example.com 2019-12-25 16:18:03 session tokens
-v1"}. If the key material is not already 256 bits, it can be converted to 256
-bits using the \flag{hash} mode. The \flag{derive_key} mode is intended to
-replace the BLAKE2 personalization parameter for its most common use cases.
+BLAKE3 provides a key derivation mode, \flag{derive_key}. This mode accepts a
+context string of any length and key material of any length, and it returns a
+derived key of any length. The context string should be hardcoded, globally
+unique, and application-specific. A good default format for context strings is
+\texttt{"[application] [commit timestamp] [purpose]"}, e.g.,
+\texttt{"example.com 2019-12-25 16:18:03 session tokens v1"}. This mode should
+not be used with a variable context string, unless that variable is itself a
+context parameter from a higher level API with the same documented security
+requirement.
 
-Key derivation can encourage better security than personalization, by
-cryptographically isolating different components of an application from one
-another. This limits the damage that one component can cause by accidentally
-leaking its key. When an application needs to use one secret in multiple
-algorithms or contexts, the best practice is to derive a separate key for each
-use case, such that the original secret is only used with the key derivation
-function. However, because the BLAKE3 modes are domain-separated, it is also
-possible to use the same key with \flag{keyed_hash} and with
-\flag{derive_key}. This can be necessary for backwards compatibility when an
-application adds a new use case for an existing key, if the original use case
-did not include a context-specific key derivation step.
+The purpose of this strict requirement is to ensure that there is no way for an
+attacker in any scenario to cause two different applications or components to
+inadvertently use the same context string. There should be no dependency
+whatsoever between user input and a context string used with \flag{derive_key}.
 
-Like \flag{keyed_hash}, \flag{derive_key} does not require any extra
-compressions. For context strings up to 64 bytes and derived key lengths up to
-64 bytes, \flag{derive_key} is a single compression. For comparison, HKDF
-generally requires eight compressions.
+Given this requirement, we then make an explicit exception to an otherwise
+universal rule of practical cryptography: Applications may use
+\flag{derive_key} with key material that is already in use with other
+algorithms. This includes other hash functions, ciphers, and abstractions like
+HMAC and HKDF. The only limitation in practice is algorithms that forbid key
+reuse entirely, like a one-time pad. (For other theoretical limitations, see
+\S\ref{sec:reusedkeys}.)
+
+Normally, using the same key with multiple algorithms is forbidden. Many
+algorithms are built from the same primitives, and it can be difficult to know
+when two algorithms might have related output, or when one algorithm might
+publish a value that another algorithm considers secret. One especially
+relevant example of this problem is HMAC and HKDF themselves. Although these
+algorithms have entirely different purposes, HKDF is defined in terms of HMAC.
+In fact, in the ``expand only'' mode of HKDF, its output is equivalent to a
+single call to HMAC. If an application used the same key with HMAC and with
+HKDF, and an HMAC input happened to collide with an HKDF context string, this
+interaction could ruin its security.
+
+The standard advice for such an application is to use its original key only
+with a key derivation function, and to derive independent subkeys for other
+algorithms. This is good and practical advice in many cases. But it may not be
+practical when an application or a protocol evolves over time. If a key was
+originally used only with HMAC, and perhaps years later a second use case
+arises, the developers may have painted themselves into a corner. Backwards
+compatibility might prevent them from using a derived subkey with HMAC. In
+cases like this, the standard advice amounts to either building a time machine,
+or over-engineering applications and protocols to derive subkeys at every step,
+in anticipation of unknown future use cases.
+
+This is why it is valuable for \flag{derive_key} to make an exception to the
+rule against mixing algorithms. It makes key derivation a practical option not
+only for new designs, but also for existing applications that are adding new
+features. In exchange, it is the responsibility of each caller to provide (or
+for abstractions, to require) a hardcoded, globally unique,
+application-specific context string, which can never be made to collide with
+any other.
+
+The \flag{derive_key} mode is intended to replace the BLAKE2 personalization
+parameter in most of its use cases. Key derivation can encourage better
+security than personalization, by cryptographically isolating different
+components of an application from one another. This limits the damage that one
+component can cause by accidentally leaking its key.
 
 \subsection{Stateful Hash Object}\label{sec:sho}
 
@@ -1237,6 +1277,51 @@ nodes also prevent an attacker from making any use of length-extended keyed
 chunk CVs. Nonetheless, we include the \flag{CHUNK_END} flag, because letting
 an attacker length-extend chunk CVs is an unnecessary risk that might impact
 unknown future applications.
+
+\subsection{Key Derivation from Reused Key Material}\label{sec:reusedkeys}
+
+As described in \S\ref{sec:kdf}, the \flag{derive_key} mode is intended to be
+safe to use even with keys that are already in use with other algorithms. It is
+impossible to guarantee such a property in general, however. As noted in that
+section, some algorithms explicitly forbid key reuse, even within the same
+algorithm. In the case of a one-time pad, if the message happens to be known or
+predictable, some or all of the key is revealed to an eavesdropper. No key
+derivation function can extract useful security from key material that is not
+secret.
+
+There are some algorithms that impose a one-time-use restriction on their key,
+but that still keep the key secret as long as that restriction is followed. The
+\flag{crypto_onetimeauth} function in the NaCl and libsodium libraries is one
+such example. It might be safe to use the same key with
+\flag{crypto_onetimeauth} (once) and with \flag{derive_key} (any number of
+times). However, precisely because of its one-time-use restriction,
+\flag{crypto_onetimeauth} is almost always used with derived subkeys anyway.
+Furthermore, this sort of algorithm-specific reasoning is exactly what
+\flag{derive_key} is designed to avoid. It is simpler and safer to forbid
+\flag{derive_key} from sharing key material with this entire class of
+one-time-use algorithms.
+
+Another limitation on key reuse is applications that violate the security
+requirement of the \flag{derive_key} context string, namely that it should be
+hardcoded, globally unique, and application-specific. If one component of an
+application feeds arbitrary user input into the context string, it is not safe
+for any other component to share key material with it. The context string no
+longer provides domain separation. This is the basic problem of sharing key
+material, and the reason that deriving separate subkeys is preferable wherever
+possible. When two different components share a key, each has to assume that
+the other will not violate the security requirements of \flag{derive_key}, just
+as each has to assume that the other will not leak the key.
+
+Another more theoretical limitation for key material reuse could be future
+algorithms that are internally identical to BLAKE3, but with different
+domain-separation conventions. A modified algoritm might sabotage domain
+separation entirely, for example, by exposing the $d$ parameter of the
+compression function to arbitrary user input. We will never publish such an
+algorithm. The common practice when designing a closely related algorithm is to
+change the IV constants, so that the new output is independent. This was the
+approach used to derive SHA-512/256 from SHA-512. The same approach could work
+for a hypothetical derivative of BLAKE3 by changing the $IV_0 \ldots IV_3$
+constants, which are used for compression function setup in all modes.
 
 % TODO: Let me know what you guys think about having an Acknowledgments section.
 \section*{Acknowledgments}\label{sec:acknowledgments}
