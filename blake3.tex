@@ -47,7 +47,7 @@
 \usepackage{subfigure}
 
 \usepackage[english]{babel}
-\usepackage[autostyle, english=american]{csquotes}
+\usepackage[autostyle,english=american]{csquotes}
 
 \usepackage{xspace}
 \usepackage{booktabs}
@@ -539,7 +539,7 @@ This is the regime where BLAKE2bp and BLAKE2sp pull ahead of BLAKE3 in figures
 BLAKE3 targets $128$-bit security for all of its security goals. That
 is, $128$-bit security against (second-)preimage, collision, or
 differentiability attacks. 
-Rationale for targetting $128$-bit security can be found
+Rationale for targeting $128$-bit security can be found
 in~\cite[\S2]{TMC}.
 
 The key length is nevertheless $256$ bits, as an extra defense layer
@@ -547,6 +547,21 @@ against weakly chosen keys, key material leaks, and potentially
 multi-target attacks.
 
 %Users who need $256$-bit security can remain using BLAKE2.
+
+\subsection{Compression Function}\label{sec:compressindiff}
+
+The BLAKE3 compression function is identical to that of BLAKE2s, with
+the exception that:
+
+\begin{itemize}
+  \item BLAKE2's $f_0$ and $f_1$ ``flags'' are replaced by the $b$ and $d$ inputs, which
+  encode the functional context of the compression function instance.
+  \item Finalization returns $16$ words instead of $8$, and only applies feed-forward on the second half of the output.
+\end{itemize}
+
+The latter change causes the BLAKE3 function to no longer be indifferentiable, unlike its predecessor~\cite{DBLP:journals/tosc/LuykxMN16}. Indeed, an attacker with oracle access to $C(\dots)$ and $E(\dots)$ that obtains $y = C(x, m, b, d)$ can compute $(x, b, d) = E^{-1}(m, (y_l, y_h) \oplus (y_h, 0) \oplus (0, x_l))$; a simulator with access to a random oracle can not perform the same inversion, and as such this scheme---much like Davies-Meyer---is not indifferentiable from a random oracle. This causes some surmountable complications in the next section.
+
+We do note that the truncated compression function used in every compression except the root nodes is indifferentiable. The simulator and proof are very similar to the ones in~\cite{DBLP:journals/tosc/LuykxMN16}, with the only change being the removal of the feed-forward, which has no effect on security when truncating the output\footnote{A recent work~\cite{DBLP:conf/asiacrypt/ChoiLL19} improves upon~\cite{DBLP:conf/fse/DodisRRS09,DBLP:journals/tosc/LuykxMN16} with a tighter bound for the indifferentiability of truncated permutations. A similar approach would work for BLAKE2 or truncated BLAKE3, but the benefits for our parameters are negligible.}.
 
 \subsection{Mode of Operation}\label{sec:mode}
 
@@ -576,64 +591,73 @@ One important aspect of any hash mode, parallel or otherwise, is its \emph{sound
   The entire input can be recovered from the message bits input to the chunks.
 }
 
-Then, by \cite[Theorem~3]{DBLP:journals/tosc/DaemenMA18}, for a distinguisher $\mathcal{D}$ of total complexity $q$ we have
-\begin{align*}
-  \mathsf{Adv}_{BLAKE3}^{\text{diff}}(\mathcal{D}) \le \frac{\binom{q}{2} + 1}{2^{256}} + \frac{\binom{q}{2}}{2^{512}} + \frac{q}{2^{256}}
-\end{align*}
-for the 256-bit output. For the full-length output, we do not have a truncated permutation, but instead a feed-forward. We remark, however, that the truncation requirement in \cite[Theorem~3]{DBLP:journals/tosc/DaemenMA18} is in place purely to prevent the distinguisher from inverting an output; as such, the feed-forward serves the same purpose as truncation, and the result still follows.
+If only considering 256-bit outputs or shorter, by \cite[Theorem~1]{DBLP:journals/tosc/DaemenMA18}, for a distinguisher $\mathcal{D}$ of total complexity $q$ we have
+\begin{align}
+  \mathsf{Adv}_{BLAKE3}^{\text{diff}}(\mathcal{D}) \le & ~\frac{\binom{q}{2}}{2^{256}} +\label{eq:thm1} \\
+  & ~\frac{\binom{q}{2}}{2^{512}} + \frac{\binom{q}{2}}{2^{256}} + \frac{q}{2^{128}} \label{eq:thm2} \,.
+\end{align}
+Here (\ref{eq:thm1}) corresponds to the contribution of \cite[Theorem~1]{DBLP:journals/tosc/DaemenMA18} and (\ref{eq:thm2}) corresponds to the indifferentiability of the truncated compression function~\cite{DBLP:journals/tosc/LuykxMN16}.
 
-\subsection{Compression Function}\label{sec:compression}
-
-The BLAKE3 compression function is identical to that of BLAKE2s, with
-the exception that:
-
-\begin{itemize}
-
-\item Initialization takes an additional parameter (the bitfield $d$,
-encoding the functional context of the compression function instance)
-
-\item Finalization returns 16 words instead of 8, which makes preimages
-or collisions even less likely. When needed, the output is truncated in
-a secure way.
-
-\end{itemize}
-
-Otherwise, the internal logic of the compression function is the same as
-that of BLAKE2.
-The known cryptanalysis results on BLAKE2's compression function
-therefore apply as well to BLAKE3's.
+For the full-length output, we do not have a truncated ideal cipher, but instead use a feed-forward to prevent inversion. We remark, however, that the truncation requirement in \cite[Theorem~3]{DBLP:journals/tosc/DaemenMA18} is in place purely to prevent the distinguisher from inverting an output; as such, the feed-forward serves the same purpose as truncation, and the result still follows as long as the other soundness requirements are in place.
 
 \subsection{Cryptanalysis}\label{sec:cryptanalysis}
+
+\begin{table}[t]
+  \centering
+  \caption{Summary of cryptanalysis on BLAKE and BLAKE2.}%
+  \label{tab:cryptanalysis}
+  \begin{tabular}{lcccc}
+    \toprule
+    Primitive      & Type         & Rounds & Complexity & Reference \\
+    \midrule
+    BLAKE-256 k.p. & Boomerang    & 7      & $2^{44}$    & \cite{DBLP:journals/iet-ifs/BaiYWW15,DBLP:conf/cisc/Hao14} \\
+    BLAKE-256 k.p. & Boomerang    & 8      & $2^{198}$    & \cite{DBLP:conf/cisc/Hao14} \\
+    BLAKE-256 k.p. & Differential & 4      & $2^{192}$    & \cite{DK11} \\
+    BLAKE-256 k.p. & Differential & 6      & $2^{456}$    & \cite{DK11} \\
+    BLAKE-256 k.p. & Impossible Differential & 6.5      & --    & \cite{DBLP:conf/ctrsa/0001KNWW14} \\
+    BLAKE-256 c.f. & Boomerang    & 7      & $2^{242}$    & \cite{DBLP:conf/fse/BiryukovNR11} \\
+    BLAKE-256 c.f. & Near collision (152/256) & 4      & $2^{21}$    & \cite{DBLP:conf/cans/SuWWD10} \\
+    BLAKE-256 c.f. & Near collision (232/256) & 4      & $2^{56}$    & \cite{DBLP:conf/fse/AumassonGKMM10} \\
+    BLAKE-256 c.f. & Preimage & 2.5      & $2^{241}$    & \cite{DBLP:journals/iacr/JiL09} \\
+    BLAKE-256 c.f. & Pseudo-preimage & 6.75 & $2^{253.9}$    & \cite{DBLP:conf/crypto/EspitauFK15} \\
+    \midrule
+    BLAKE2s k.p.   & Boomerang    & 7.5    & $2^{184}$    & \cite{DBLP:conf/cisc/Hao14} \\
+    BLAKE2s k.p.   & Impossible Differential & 6.5      & --    & \cite{DBLP:conf/ctrsa/0001KNWW14} \\
+    BLAKE2s k.p.   & Rotational   & 4    & $2^{489}$    & \cite{DBLP:conf/ctrsa/0001KNWW14,DBLP:conf/fse/KhovratovichNPS15} \\
+    BLAKE2s c.f. & Pseudo-preimage & 6.75 & $2^{253.8}$    & \cite{DBLP:conf/crypto/EspitauFK15} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 The round reduction from 10 to 7 rounds is based on existent cryptanalysis, along with novel research.
 High confidence in the security of 7 rounds follows from cryptanalysis
 efforts over 10 years, first on
 BLAKE~\cite{DBLP:conf/cans/SuWWD10,DBLP:journals/ipl/VidaliNP10,DBLP:journals/iet-ifs/BaiYWW15,DBLP:conf/fse/AumassonGKMM10,DBLP:journals/iacr/JiL09,DK11,DBLP:conf/fse/BiryukovNR11}
-and then on BLAKE2~\cite{DBLP:conf/ctrsa/0001KNWW14,DBLP:conf/cisc/Hao14,DBLP:conf/crypto/EspitauFK15}.
+and then on BLAKE2~\cite{DBLP:conf/ctrsa/0001KNWW14,DBLP:conf/cisc/Hao14,DBLP:conf/crypto/EspitauFK15}. Table~\ref{tab:cryptanalysis} summarizes the current state of the art in BLAKE(2) cryptanalysis.
 
-Furthermore, Table~\ref{tab:trails} shows that the initialization of BLAKE2/3, by restricting inputs, makes things harder for the attacker, with probabilities getting very low very quickly. As also observed in~\cite[\S7]{DBLP:conf/ctrsa/0001KNWW14}. 
+Furthermore, our own searches for good\footnote{Optimal under certain assumptions, which are not entirely correct, cf. \cite{cryptoeprint:2013:328}. Nevertheless we find these results useful as a first approximation.} differential trails, shown in Table~\ref{tab:trails}, show that by restricting input differences the initialization of BLAKE2/3 makes things harder for the attacker, with probabilities quickly becoming very low. This was also observed in~\cite[\S7]{DBLP:conf/ctrsa/0001KNWW14}. 
 
-The boomerang attacks of, e.g., \cite{DBLP:conf/cisc/Hao14,DBLP:conf/fse/BiryukovNR11,DBLP:journals/iet-ifs/BaiYWW15} exploit the high probabilities on the first few rounds to connect two trails and get through a few more rounds. This is a usual trick to get around the very quick lowering of probabilities in ARX constructs, along with differential-linear attacks. But such attacks do not present a threat to BLAKE3, considering its $128$-bit security target, and input restrictions on the compression function input (i.e., the IV).
-
-\begin{table}
-\centering
-\caption{Best differential trail probabilities for increasing round numbers of the compression functions of BLAKE-256, BLAKE2s, and BLAKE3, respecting their constraints on inputs to the keyed permutation. Probabilities marked with ${}^\ast$ indicate symmetric differences were sought exclusively.}%
-\label{tab:trails}
-\begin{tabular}{lccccccc}
-  \toprule
-  Function & 0.5   & 1     & 1.5   & 2     & 2.5   & 3     & 3.5 \\ \midrule
-  BLAKE-256 c.f. & $2^{-0}$ & $2^{-0}$ & $2^{-0}$ & $2^{-1}$ & $2^{-6}$ & $2^{-7}$ & $2^{-38}$  \\
-  BLAKE\{2s,3\} c.f.   &  $2^{-0}$  & $2^{-0}$ &  $2^{-0}$  & $2^{-1}$ & $2^{-32}$   & $2^{-88} \le p<2^{-48}$ & -  \\
-  BLAKE\{-256,2s,3\} & $2^{-0}$ & $2^{-1}$ & $2^{-32}$ & ${\ge 2^{-190}}^\ast$ & - & - & -  \\ % 2^{-190} with 8-symmetric $\Delta$, $2^{-230}$ with 4-symmetric $\Delta$ m10 = 0x88888888
-  BLAKE-256 c.f. (CV only) & $2^{-0}$ & $2^{-2}$ & $2^{-12}$ & $2^{-39}$ & - & - & - \\
-  BLAKE\{2s,3\} c.f. (CV only) & $2^{-0}$ & $2^{-7}$ & $2^{-32}$ & ${\ge 2^{-161}}^\ast$ & - & - & - \\ % 2^{-161} with 8-symmetric $\Delta$, $2^{-161}$ with 4-symmetric $\Delta$
-  \bottomrule
-\end{tabular}
-\end{table}
+The boomerang attacks of, e.g., \cite{DBLP:conf/cisc/Hao14,DBLP:conf/fse/BiryukovNR11,DBLP:journals/iet-ifs/BaiYWW15} exploit the high probabilities on the first few rounds to connect two trails and get through a few more rounds. This is a usual trick to get around the very quick lowering of probabilities in ARX constructs, along with differential-linear attacks. But such attacks do not present a threat to BLAKE3, considering its $128$-bit security target, and input constraints on the compression function (i.e., the IV constants). \alert{This paragraph is overly informal and doesn't really say much. Could be removed.}
 
 The more general survey and analysis in~\cite{TMC} also pleads in favor
 of reduced round values, arguing that BLAKE2s and BLAKE2b would be as
 safe with 7 and 8 rounds, respectively.
+
+\begin{table}[t]
+  \centering
+  \caption{Best differential trail probabilities for increasing round numbers of the compression functions of BLAKE-256, BLAKE2s, and BLAKE3, respecting their constraints on inputs to the keyed permutation. Probabilities marked with ${}^\ast$ indicate rotationally symmetric differences were sought exclusively.}%
+  \label{tab:trails}
+  \begin{tabular}{lccccccc}
+    \toprule
+    Function & 0.5   & 1     & 1.5   & 2     & 2.5   & 3     & 3.5 \\ \midrule
+    BLAKE-256 c.f. & $2^{-0}$ & $2^{-0}$ & $2^{-0}$ & $2^{-1}$ & $2^{-6}$ & $2^{-7}$ & $2^{-38}$  \\
+    BLAKE\{2s,3\} c.f.   &  $2^{-0}$  & $2^{-0}$ &  $2^{-0}$  & $2^{-1}$ & $2^{-32}$   & $\left[2^{-88}, 2^{-48}\right)$ & -  \\
+    BLAKE\{-256,2s,3\} (hash) & $2^{-0}$ & $2^{-1}$ & $2^{-32}$ & ${\ge 2^{-190}}^\ast$ & - & - & -  \\ % 2^{-190} with 8-symmetric $\Delta$, $2^{-230}$ with 4-symmetric $\Delta$ m10 = 0x88888888
+    BLAKE-256 c.f. (fixed $m$) & $2^{-0}$ & $2^{-2}$ & $2^{-12}$ & $2^{-39}$ & - & - & - \\
+    BLAKE\{2s,3\} c.f. (fixed $m$) & $2^{-0}$ & $2^{-7}$ & $2^{-32}$ & ${\ge 2^{-161}}^\ast$ & - & - & - \\ % 2^{-161} with 8-symmetric $\Delta$, $2^{-161}$ with 4-symmetric $\Delta$
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \section{Implementation}\label{sec:implementation}
 
