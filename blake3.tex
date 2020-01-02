@@ -721,29 +721,29 @@ subtrees does it complete? Which is to say, how many CVs should we pop off the
 stack and merge with it, before pushing on the final result?
 
 To answer this question, note another pattern. The entries in the CV stack
-behave like the 1 bits in the binary representation of the total number of
+behave like the 1-bits in the binary representation of the total number of
 chunks so far. For example with 3 chunks (0b11), there are two entries in the
-stack, corresponding to the two 1 bits. With 4 chunks (0b100), only one entry
-remains, corresponding to the single 1 bit.
+stack, corresponding to the two 1-bits. With 4 chunks (0b100), only one entry
+remains, corresponding to the single 1-bit.
 
 To see why this pattern holds, note that all the completed subtrees represented
 by CVs in the stack contain a number of chunks that is a power of 2.
 Furthermore, each subtree is a distinct power of 2, because when we have two
 subtrees of the same size, we always merge them. Thus, the subtrees in the
 stack correspond to the distinct powers of 2 that sum up to the current total
-number of chunks. This is equivalent to the 1 bits in the binary representation
+number of chunks. This is equivalent to the 1-bits in the binary representation
 of that number.
 
-In this sense, popping a CV off the stack to merge it is like flipping a 1 bit
-to 0, and pushing the final result back onto the stack is like flipping a 0 bit
+In this sense, popping a CV off the stack to merge it is like flipping a 1-bit
+to 0, and pushing the final result back onto the stack is like flipping a 0-bit
 to 1. The fact that we do two merges when adding the fourth chunk, corresponds
-to the fact that two 1 bits flip to 0 as the total changes from 3 to 4. In
+to the fact that two 1-bits flip to 0 as the total changes from 3 to 4. In
 other words, we do two merges when we add the fourth chunk, because there are
-two trailing 1 bits in the number 3, and similarly two trailing 0 bits in the
+two trailing 1-bits in the number 3, and similarly two trailing 0-bits in the
 number 4.
 
 This pattern leads to an algorithm for adding a new chunk CV to the tree: For
-each trailing 0 bit in the new total number of chunks, pop a CV off the stack,
+each trailing 0-bit in the new total number of chunks, pop a CV off the stack,
 and merge it with the new CV we were about to add. Finally, push the fully
 merged result onto the stack. Listing~\ref{listing:push_chunk_chaining_value}
 shows this algorithm as it appears in the Rust reference implementation.
@@ -757,7 +757,7 @@ fn add_chunk_chaining_value(&mut self, mut new_cv: [u32; 8], mut total_chunks: u
     // child off the stack, merge it with `new_cv`, and overwrite `new_cv`
     // with the result. After all these merges, push the final value of
     // `new_cv` onto the stack. The number of completed subtrees is given
-    // by the number of trailing 0 bits in the new total number of chunks.
+    // by the number of trailing 0-bits in the new total number of chunks.
     while total_chunks & 1 == 0 {
         new_cv = parent_cv(self.pop_stack(), new_cv, self.key, self.flags);
         total_chunks >>= 1;
@@ -1214,8 +1214,8 @@ The CV stack algorithm described in \S\ref{sec:cvstack} is important for
 simplifying a BLAKE3 implementation. It also saves space, because the
 implementation does not need to store size or level metadata along with each
 CV. Consider how this algorithm would change, if BLAKE3 used a fanout of 4.
-Instead of "count the trailing 0 bits, and pop that many CVs" it would be
-"count the trailing 0-0 bit pairs, and pop that many CV triplets." That can
+Instead of "count the trailing 0-bits, and pop that many CVs" it would be
+"count the trailing 0-0-bit pairs, and pop that many CV triplets." That can
 still be done with a bit mask, but programmers would need to reason about
 quaternary numbers to understand what was going on. Other complexities would
 crop up as well: parent nodes would no longer be a fixed size, and new
