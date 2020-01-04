@@ -535,15 +535,19 @@ This is the regime where BLAKE2bp and BLAKE2sp pull ahead of BLAKE3 in figures
 
 \section{Security}\label{sec:security}
 
-TODO
-
 \subsection{Security Goals}\label{sec:goals}
 
-BLAKE3 targets $128$-bit security for all of its security goals. That is, $128$-bit security against (second-)preimage, collision, or differentiability attacks. Users who need $256$-bit security can remain using BLAKE2.
+BLAKE3 targets $128$-bit security for all of its security goals. That
+is, $128$-bit security against (second-)preimage, collision, or
+differentiability attacks. 
+Rationale for targetting $128$-bit security can be found
+in~\cite[\S2]{TMC}.
 
-The key length is nevertheless $256$ bits, which is useful against multi-target or possible certificational attacks.
+The key length is nevertheless $256$ bits, as an extra defense layer
+against weakly chosen keys, key material leaks, and potentially
+multi-target attacks.
 
-On why 128-bit security is enough~\cite{TMC}.
+%Users who need $256$-bit security can remain using BLAKE2.
 
 \subsection{Mode of Operation}\label{sec:mode}
 
@@ -581,20 +585,36 @@ for the 256-bit output. For the full-length output, we do not have a truncated p
 
 \subsection{Compression Function}\label{sec:compression}
 
+The BLAKE3 compression function is identical to that of BLAKE2s, with
+the exception that:
 
+\begin{itemize}
+
+\item Initialization takes an additional parameter (the bitfield $d$,
+encoding the functional context of the compression function instance)
+
+\item Finalization returns 16 words instead of 8, which makes preimages
+or collisions even less likely. When needed, the output is truncated in
+a secure way.
+
+\end{itemize}
+
+Otherwise, the internal logic of the compression function is the same as
+that of BLAKE2.
+The known cryptanalysis results on BLAKE2's compression function
+therefore apply as well to BLAKE3's.
 
 \subsection{Cryptanalysis}\label{sec:cryptanalysis}
 
-The rather aggressive round reduction from 10 to 7 rounds is based on existent cryptanalysis, along with novel research.
+The round reduction from 10 to 7 rounds is based on existent cryptanalysis, along with novel research.
+High confidence in the security of 7 rounds follows from cryptanalysis
+efforts over 10 years, first on
+BLAKE~\cite{DBLP:conf/cans/SuWWD10,DBLP:journals/ipl/VidaliNP10,DBLP:journals/iet-ifs/BaiYWW15,DBLP:conf/fse/AumassonGKMM10,DBLP:journals/iacr/JiL09,DK11,DBLP:conf/fse/BiryukovNR11}
+and then on BLAKE2~\cite{DBLP:conf/ctrsa/0001KNWW14,DBLP:conf/cisc/Hao14,DBLP:conf/crypto/EspitauFK15}.
 
-See~\cite{TMC}.
+Furthermore, Table~\ref{tab:trails} shows that the initialization of BLAKE2/3, by restricting inputs, makes things harder for the attacker, with probabilities getting very low very quickly. As also observed in~\cite[\S7]{DBLP:conf/ctrsa/0001KNWW14}. 
 
-\begin{itemize}
-  \item Cryptanalysis of BLAKE~\cite{DBLP:conf/cans/SuWWD10,DBLP:journals/ipl/VidaliNP10,DBLP:journals/iet-ifs/BaiYWW15,DBLP:conf/fse/AumassonGKMM10,DBLP:journals/iacr/JiL09,DK11,DBLP:conf/fse/BiryukovNR11}
-  \item Cryptanalysis of BLAKE2~\cite{DBLP:conf/ctrsa/0001KNWW14,DBLP:conf/cisc/Hao14,DBLP:conf/crypto/EspitauFK15}
-  \item Table~\ref{tab:trails} shows that the initialization of BLAKE2/3, by restricting inputs, makes things harder for the attacker, with probabilities getting very low very quickly. As also observed in~\cite[\S7]{DBLP:conf/ctrsa/0001KNWW14}. 
-  \item The boomerang attacks of, e.g., \cite{DBLP:conf/cisc/Hao14,DBLP:conf/fse/BiryukovNR11,DBLP:journals/iet-ifs/BaiYWW15} exploit the high probabilities on the first few rounds to connect two trails and get through a few more rounds. This is a usual trick to get around the very quick lowering of probabilities in ARX constructs, along with differential-linear attacks. But such attacks do not present a threat to BLAKE3, considering its $128$-bit security target, and input restrictions on the compression function input (i.e., the IV).
-\end{itemize}
+The boomerang attacks of, e.g., \cite{DBLP:conf/cisc/Hao14,DBLP:conf/fse/BiryukovNR11,DBLP:journals/iet-ifs/BaiYWW15} exploit the high probabilities on the first few rounds to connect two trails and get through a few more rounds. This is a usual trick to get around the very quick lowering of probabilities in ARX constructs, along with differential-linear attacks. But such attacks do not present a threat to BLAKE3, considering its $128$-bit security target, and input restrictions on the compression function input (i.e., the IV).
 
 \begin{table}
 \centering
@@ -611,6 +631,10 @@ See~\cite{TMC}.
   \bottomrule
 \end{tabular}
 \end{table}
+
+The more general survey and analysis in~\cite{TMC} also pleads in favor
+of reduced round values, arguing that BLAKE2s and BLAKE2b would be as
+safe with 7 and 8 rounds, respectively.
 
 \section{Implementation}\label{sec:implementation}
 
