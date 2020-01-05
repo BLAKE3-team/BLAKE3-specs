@@ -23,6 +23,7 @@ HASH_NAMES = [
     ("sha256", "OpenSSL SHA-256"),
     ("sha512", "OpenSSL SHA-512"),
     ("sha3-256", "OpenSSL SHA3-256"),
+    ("kangarootwelve", "KangarooTwelve"),
 ]
 
 SIZES = [
@@ -124,7 +125,7 @@ def main():
     # seaborn.set_context("talk")
     dash_styles = [
         "", (4, 1.5), (1, 1), (3, 1, 1.5, 1), (5, 1, 1, 1), (5, 1, 2, 1, 2, 1),
-        (2, 2, 3, 1.5), (1, 2.5, 3, 1.2)
+        (2, 2, 3, 1.5), (1, 2.5, 3, 1.2), (2, 2)
     ]
     plot = seaborn.lineplot(
         data=dataframe,
