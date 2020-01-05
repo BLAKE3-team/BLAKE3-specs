@@ -809,7 +809,7 @@ recursive callsite.
 The recursive approach is simplest when the entire input is available at once,
 since no CV stack is needed. In an incremental setting, a hybrid approach is
 also possible. A large buffer of input can be compressed recursively into a
-single subtree CV, and that CV can be pushed onto the CV stack using the same
+subtree CV, and that CV can be pushed onto the CV stack using the same
 algorithm as in \S\ref{sec:cvstack}. If each incremental input is a fixed
 power-of-2 number of chunks in size (for example if all input is copied into an
 internal buffer before compression), the push algorithm works with no
@@ -818,7 +818,9 @@ caller is compressed directly without copying), the implementation needs to
 maintain the largest-to-smallest ordering invariant of the CV stack. The size
 of each subtree being compressed must evenly divide the total number of input
 bytes received so far, and the implementation might need to break up the
-caller's input into separate pieces.
+caller's input into separate pieces. In this case, the implementation must also
+take care not to compress a parent node that could be the root, when it is
+unknown whether more input is coming.
 
 \subsection{SIMD}\label{sec:simd}
 
