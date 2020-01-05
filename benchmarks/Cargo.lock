@@ -68,6 +68,7 @@ dependencies = [
  "blake2s_simd 0.5.9 (git+https://github.com/oconnor663/blake2_simd?rev=43d9b9bf71b7cc2690587adb2c21a2c2b4031a1a)",
  "blake3 0.1.0",
  "criterion 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kangarootwelve 0.0.0",
  "openssl 0.10.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "page_size 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -271,6 +272,10 @@ dependencies = [
 name = "itoa"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "kangarootwelve"
+version = "0.0.0"
 
 [[package]]
 name = "lazy_static"

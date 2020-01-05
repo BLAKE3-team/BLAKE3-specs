@@ -57,6 +57,10 @@ fn benchmarks(c: &mut Criterion) {
             let mut input = RandomInput::new(*param);
             b.iter(|| openssl::hash::hash(openssl::hash::MessageDigest::sha3_256(), input.get()));
         })
+        .with_function("kangarootwelve", |b, param| {
+            let mut input = RandomInput::new(*param);
+            b.iter(|| kangarootwelve::kangarootwelve(input.get()));
+        })
         .throughput(|len| Throughput::Bytes(*len as u64));
     c.bench("bench_group", b);
 }

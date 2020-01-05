@@ -17,6 +17,7 @@ blake3 = { path = "../../BLAKE3", features = ["c_avx512"] }
 blake2b_simd = { git = "https://github.com/oconnor663/blake2_simd", rev = "43d9b9bf71b7cc2690587adb2c21a2c2b4031a1a", features = ["uninline_portable"] }
 blake2s_simd = { git = "https://github.com/oconnor663/blake2_simd", rev = "43d9b9bf71b7cc2690587adb2c21a2c2b4031a1a" }
 criterion = "0.3.0"
+kangarootwelve = { path = "./kangarootwelve" }
 openssl = { version = "0.10.26", features = ["vendored"] }
 page_size = "0.4.1"
 rand = "0.7.2"
