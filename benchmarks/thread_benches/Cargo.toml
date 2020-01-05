@@ -1,0 +1,18 @@
+[package]
+name = "blake3_paper_benchmarks_threading"
+version = "0.0.0"
+edition = "2018"
+
+[[bench]]
+name = "bench"
+harness = false
+
+[dependencies]
+# The official BLAKE3 Rust implementation. As a path dependency for now, until
+# the repo becomes public.
+blake3 = { path = "../../../BLAKE3", features = ["c_avx512", "rayon"] }
+criterion = "0.3.0"
+page_size = "0.4.1"
+rand = { version = "0.7.2", features = ["small_rng"] }
+rayon = "1.3.0"
+once_cell = "1.2.0"
