@@ -19,6 +19,11 @@ BENCH_NAMES = [
 ]
 
 SIZES = [
+    (2**15, "32 KiB"),
+    (2**16, "64 KiB"),
+    (2**17, "128 KiB"),
+    (2**18, "256 KiB"),
+    (2**19, "512 KiB"),
     (2**20, "1 MiB"),
     (2**21, "2 MiB"),
     (2**22, "4 MiB"),
@@ -56,15 +61,14 @@ def main():
             point = slope["point_estimate"]
             # upper = slope["confidence_interval"]["upper_bound"]
             # lower = slope["confidence_interval"]["lower_bound"]
-            mbps_throughput = size / point * 1000
+            gbps_throughput = size / point
             if len(throughputs) == size_i:
                 throughputs.append([])
                 sizes.append(size)
                 if size in sizes_map:
                     ticks.append(size)
                     tick_names.append(sizes_map[size])
-            throughputs[size_i].append(mbps_throughput)
-    print(throughputs, sizes, bench_names)
+            throughputs[size_i].append(gbps_throughput)
     dataframe = pandas.DataFrame(throughputs, sizes, bench_names)
 
     seaborn.set()
@@ -78,7 +82,7 @@ def main():
         data=dataframe,
         sort=False,
     )
-    plot.set(ylabel="Throughput (MB/s)\n")
+    plot.set(ylabel="Throughput (GB/s)\n")
     pyplot.ylim(0, 1.1 * max(max(col) for col in throughputs))
     plot.set(xscale="log")
     pyplot.legend(loc="best", framealpha=1)

@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion, ParameterizedBenchmark, Throughput};
 use rand::prelude::*;
 
-const MIN_LEN: usize = 1 << 20;
+const MIN_LEN: usize = 1 << 15;
 const MAX_LEN: usize = 1 << 30;
 
 criterion_group!(cg, benchmarks);
