@@ -210,9 +210,9 @@ smaller architectures, without sacrificing peak throughput on x86\=/64.
 
 The BLAKE3 compression function is closely based on that of BLAKE2s.
 BLAKE3 has the same 128-bit security level and 256-bit default output
-size. The round function is identical, along with the IV constants \alert{and
+size. The round function is identical, along with the IV constants and
 the message schedule. Thus, cryptanalysis of BLAKE2 applies directly to
-BLAKE3.} Based on that analysis and with the benefit of hindsight, we
+BLAKE3. Based on that analysis and with the benefit of hindsight, we
 believe that BLAKE2 is overly conservative in its number of rounds, and
 BLAKE3 reduces the number of rounds from 10 to 7 (see~\cite{TMC} for
 detailed rationale).
@@ -255,8 +255,6 @@ parent node. The chaining value of the root node, encoded as 32 bytes in
 little-endian order, is the default-length BLAKE3 hash of the input. BLAKE3
 supports input of any byte length $0 \leq \ell < 2^{64}$.
 
-\alert{Lots of references to ``default length''. Given that the output is not different between different sizes---in theory, BLAKE3's output is an infinite-length string---it's much less of an issue than in BLAKE2.}
-
 \subsection{Compression Function}\label{sec:compression}
 
 The compression function takes an 8-word chaining value, a 16-word message
@@ -295,9 +293,9 @@ The $\IV_{0} \ldots \IV_{7}$ constants are the same as in
 BLAKE2s, and they are reproduced in Appendix~\ref{sec:ivconstants}.
 
 The compression function applies a 7-round keyed permutation $v' = E(m, v)$ to
-the state $v_0 \dots v_{15}$, keyed by the message $m_0 \dots m_{15}$. \alert{The
+the state $v_0 \dots v_{15}$, keyed by the message $m_0 \dots m_{15}$. The
 keyed permutation here is identical to that of BLAKE2s, and is
-reproduced in Appendix~\ref{sec:roundfn}.}
+reproduced in Appendix~\ref{sec:roundfn}.
 
 The output of the compression function $h_{0}' \ldots h_{15}'$ is
 defined as:
@@ -319,7 +317,7 @@ h_{14}' \ & \leftarrow \ v'_{14} \oplus  h_{6} \\
 h_{7}'  \ & \leftarrow \ v'_{7} \oplus  v'_{15} &
 h_{15}' \ & \leftarrow \ v'_{15} \oplus  h_{7}\,.
 \end{align*}
-If we define $v_l$ (resp. $v'_l$) and $v_h$ (resp. $v'_h$) as the first and last 8-words of the input (resp. output) of $E(m, v)$ as elements of $\mathbb{F}_2^{256}$, the compression function may be represented as the affine transformation
+If we define $v_l$ (resp. $v'_l$) and $v_h$ (resp. $v'_h$) as the first and last 8-words of the input (resp. output) of $E(m, v)$, the compression function may be written as
 \[
   \begin{pmatrix}
     1 & 1 \\
@@ -332,7 +330,7 @@ If we define $v_l$ (resp. $v'_l$) and $v_h$ (resp. $v'_h$) as the first and last
    0 \\ v_l
   \end{pmatrix}\,.
 \]
-The output of the compression function is often truncated to produce 256-bit chaining values. %We defer to analysis of the compression function to \S\ref{sec:security}.
+The output of the compression function is most often truncated to produce 256-bit chaining values. %We defer to analysis of the compression function to \S\ref{sec:security}.
 
 %\subsubsection{Flags}
 The compression function input $d$ is a bitfield, with each individual flag consisting of a power of 2. The value of $d$ is the sum of all the flags defined for a given
@@ -624,6 +622,7 @@ For the full-length output, we do not have a truncated ideal cipher, but instead
     BLAKE2s k.p.   & Boomerang    & 7.5    & $2^{184}$    & \cite{DBLP:conf/cisc/Hao14} \\
     BLAKE2s k.p.   & Impossible Differential & 6.5      & --    & \cite{DBLP:conf/ctrsa/0001KNWW14} \\
     BLAKE2s k.p.   & Rotational   & 4    & $2^{489}$    & \cite{DBLP:conf/ctrsa/0001KNWW14,DBLP:conf/fse/KhovratovichNPS15} \\
+    BLAKE2s c.f. & Boomerang & 5 & $\approx 2^{86}$    & \cite{DBLP:conf/fse/BiryukovNR11,DBLP:conf/ctrsa/0001KNWW14} \\
     BLAKE2s c.f. & Pseudo-preimage & 6.75 & $2^{253.8}$    & \cite{DBLP:conf/crypto/EspitauFK15} \\
     \bottomrule
   \end{tabular}
@@ -745,8 +744,8 @@ stack and merge with it, before pushing on the final result?
 
 To answer this question, note another pattern. The entries in the CV stack
 behave like the 1-bits in the binary representation of the total number of
-chunks so far. For example with 3 chunks (0b11), there are two entries in the
-stack, corresponding to the two 1-bits. With 4 chunks (0b100), only one entry
+chunks so far. For example with 3 chunks (\texttt{0b11}), there are two entries in the
+stack, corresponding to the two 1-bits. With 4 chunks (\texttt{0b100}), only one entry
 remains, corresponding to the single 1-bit.
 
 To see why this pattern holds, note that all the completed subtrees represented
@@ -819,7 +818,7 @@ traversal. The input is split into left and right parts. As per the rules in
 \S\ref{sec:tree}, the left part receives the largest power-of-2 number of
 chunks that leaves at least 1 byte for the right part. Each part then repeats
 this splitting step recursively, until the parts are chunk-sized, and each
-chunk is compressed into a CV. On the way back up the callstack, each pair of
+chunk is compressed into a CV. On the way back up the call stack, each pair of
 left and right child CVs is compressed into a parent CV.
 
 This recursive approach fits well into a fork-join concurrency model, like
@@ -827,7 +826,7 @@ those provided by OpenMP, Cilk, and Rayon (Rust). Each left and right part
 becomes a separate task, and a work-stealing runtime parallelizes those tasks
 across however many threads are available. This can work without heap
 allocation, because the runtime can make a fixed-size stack allocation at each
-recursive callsite.
+recursive call site.
 
 The recursive approach is simplest when the entire input is available at once,
 since no CV stack is needed. In an incremental setting, a hybrid approach is
@@ -876,8 +875,6 @@ parallel. Here the G function operates on one column or diagonal at a time, but
 across all of the states, and no diagonalization step is required. When enough
 input is available, this approach is much more efficient than the first
 approach. It also scales to wider instruction sets like AVX2 and AVX-512.
-
-\alert{For SIMD implementations with multiple 128-bit lanes, such as AVX2 and AVX-512, there is a 3rd approach that simply replicates the first approach without transposing the state / message. This might be advantageous in some short-message regimes to be determined.}
 
 The second approach can be integrated with the CV stack algorithm from
 \S\ref{sec:cvstack} by computing multiple chunk CVs in parallel and then
@@ -991,13 +988,13 @@ component can cause by accidentally leaking its key.
 
 \subsection{Stateful Hash Object}\label{sec:sho}
 
-To abstract away various ways to use hash function in the Noise protocol framework, Trevor Perrin has suggested the notion of \emph{stateful hash objects} (SHO)~\cite{Perrin19}. A SHO is an interface with 3 methods:
+To abstract away various uses of the hash function in the Noise protocol framework, the notion of \emph{stateful hash objects} (SHO)~\cite{Perrin19} has been suggested. A SHO is an interface with 3 methods:
 \begin{itemize}
   \item \texttt{init(label)}: Initialize the internal state using a custom domain-separation label.
   \item \texttt{absorb(data)}: Hashes an arbitrary number of bytes into the state.
   \item \texttt{squeeze(length)}: Produces an arbitrary amount of pseudorandom output based on the current state.
 \end{itemize}
-Due to its zero-overhead keying and variable-length output, BLAKE3 may be adapted into a SHO quite easily. The internal state at the time $t$ is represented by a $256$-bit key $k_t$:
+Due to its zero-overhead keying and variable-length output, it is straightforward to adapt BLAKE3into a SHO. The internal state at the time $t$ is represented by a $256$-bit key $k_t$:
 \begin{itemize}
   \item The initial key, $k_0$, is obtained as $k_0 = \text{\flag{hash}}(label)$;
   \item \texttt{absorb(data)} updates the key: $k_{i+1} = \text{\flag{keyed_hash}}(k_i, data)$;
@@ -1104,7 +1101,7 @@ anything from the right half of the tree.
 Note that this strategy cannot efficiently insert or remove bytes from the
 middle of an input. That would change the position of all the bytes to the
 right of the edit and force re-hashing. This is similar to the constraints of a
-typical filesystem, where appends and in-place edits are efficent, but
+typical filesystem, where appends and in-place edits are efficient, but
 insertions and removals within a file are either slow or unsupported.
 
 \section{Rationales}\label{sec:rationales}
@@ -1184,7 +1181,7 @@ Choosing 32-bit words is a substantial benefit for these platforms, with little
 or no downside for x86-64. Cross-platform flexibility is also important for
 protocol designers, who have to consider the performance of their designs
 across a wide range of hardware, and who are becoming increasingly skeptical of
-designs supporting multiple algorithms.\cite{WG}
+designs supporting multiple algorithms~\cite{WG}.
 
 \subsection{Compression Function Feed Forward}\label{sec:feedforward}
 
@@ -1198,8 +1195,8 @@ bytes were known.
 
 When the full output is used, mixing the first and second halves of the state
 is redundant. However, when the truncated output is used, mixing the halves
-makes the compression function slightly stronger against truncated
-differentials. The default 32-byte output size is a truncated output, and
+makes the output use all the state words computed during the last round. 
+The default 32-byte output size is a truncated output, and
 truncated outputs are also used for chaining values in the interior of the
 tree.
 
@@ -1239,20 +1236,20 @@ The CV stack algorithm described in \S\ref{sec:cvstack} is important for
 simplifying a BLAKE3 implementation. It also saves space, because the
 implementation does not need to store size or level metadata along with each
 CV. Consider how this algorithm would change, if BLAKE3 used a fanout of 4.
-Instead of "count the trailing 0-bits, and pop that many CVs" it would be
-"count the trailing 0-0-bit pairs, and pop that many CV triplets." That can
+Instead of ``count the trailing 0-bits, and pop that many CVs'' it would be
+``count the trailing 0-0-bit pairs, and pop that many CV triplets.'' That can
 still be done with a bit mask, but programmers would need to reason about
 quaternary numbers to understand what was going on. Other complexities would
 crop up as well: parent nodes would no longer be a fixed size, and new
 ambiguities in the tree layout would require a third rule in \S\ref{sec:tree}
-along the lines of "all non-rightmost sibling subtrees have the same number of
-chunks."
+along the lines of ``all non-rightmost sibling subtrees have the same number of
+chunks.''
 
 A fanout of 4 would also would also increase the memory requirement of the CV
 stack. Instead of storing one CV per level of the tree, we would need to store
 three. The tree would be half as tall, but ultimately the CV stack would be
 larger by a factor of $3/2$. In general, the size of the CV stack for a fanout
-$F$ is proportional to $(F-1)/log_2(F)$, which increases as $F$ increases.
+$F$ is proportional to $(F-1)/\log_2(F)$, which increases as $F$ increases.
 
 A different approach to the CV stack is possible, which could save space at
 larger fanouts. Rather than storing CV bytes directly, the implementation could
@@ -1262,7 +1259,7 @@ incremental chunk state. An incremental state requires a 32-byte CV and a
 directly. (Perhaps the 64-byte buffer could be reduced to 32 bytes in some
 cases, depending on the details of parent node finalization, and at the cost of
 more complexity.) But at higher fanouts, the memory requirement would be
-proportional to $1/log_2(F)$. At fanout 16 and above, this approach could save
+proportional to $1/\log_2(F)$. At fanout 16 and above, this approach could save
 space relative to the binary tree.
 
 However, recall from \S\ref{sec:memory} that space-constrained implementations
@@ -1279,7 +1276,7 @@ parent node with an unlimited number of leaves. This approach does not require
 a CV stack at all. Instead, the implementation only needs to manage the
 incremental state of the current chunk and the incremental state of the single
 parent node. Notably, this is the approach taken by the KangarooTwelve hash
-function. It has large benefits for simplicity and space efficiency, but also
+function~\cite{DBLP:conf/acns/BertoniDPAKV18}. It has large benefits for simplicity and space efficiency, but also
 several downsides. Parent blocks cannot be compressed in parallel, requiring a
 larger chunk size to keep overhead low (see \S\ref{sec:chunksize}).
 Multi-threading is more complex and generally requires heap allocation, because
@@ -1303,7 +1300,7 @@ poor for shorter inputs.
 The \flag{ROOT} and \flag{CHUNK_START} domain flags are necessary for security.
 The \flag{ROOT} flag separates the root node from all other nodes, and it
 separates the final block from all other blocks in a root chunk, both of which
-prevent length extensions. The \flag{CHUNK_START} flag separates chunks from
+prevent length extension. The \flag{CHUNK_START} flag separates chunks from
 parent nodes, and it separates an IV provided by the caller (the key in the
 keyed hashing mode) from block CVs computed within a chunk, both of which
 prevent collisions.
@@ -1363,7 +1360,7 @@ as each has to assume that the other will not leak the key.
 
 Another more theoretical limitation for key material reuse could be future
 algorithms that are internally identical to BLAKE3, but with different
-domain-separation conventions. A modified algoritm might sabotage domain
+domain-separation conventions. A modified algorithm might sabotage domain
 separation entirely, for example, by exposing the $d$ parameter of the
 compression function to arbitrary user input. We will never publish such an
 algorithm. The common practice when designing a closely related algorithm is to
