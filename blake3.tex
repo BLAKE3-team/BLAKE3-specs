@@ -452,11 +452,10 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 % proper AVX-512 implementation of BLAKE2, using the new rotation instructions.
 \begin{figure}[h]
 \centering
-%\input{./benchmarks/results/avx512_detect_c.pgf}
-\input{./img/avx512_detect_c.tikz}
-\caption{Throughput for a single-threaded implementation of BLAKE3 at various
-    input lengths on an Intel Skylake-SP processor.}%
-\label{fig:avx512_c}
+\input{./img/avx512.tikz}
+\caption{Cycles-per-byte for a single-threaded implementation of BLAKE3 at
+    various input lengths on an Intel Skylake-SP processor. Lower is better.}%
+\label{fig:avx512}
 \end{figure}
 
 \begin{figure}[h]
@@ -493,7 +492,7 @@ than e.g.\ 128~KiB.) Peak throughput occurs at 4~MiB of input, at which point
 BLAKE3 is $5\times$ faster than BLAKE2bp and BLAKE2sp and an order of magnitude
 faster than BLAKE2b, BLAKE2s, SHA-2, and SHA-3.
 
-Figure~\ref{fig:avx512_c} shows the throughput of a single-threaded
+Figure~\ref{fig:avx512} shows the throughput of a single-threaded
 implementation of BLAKE3 on modern server hardware. This benchmark ran on an
 AWS c5.metal instance with an Intel Skylake-SP 8175M processor, supporting
 AVX-512 vector instructions, and with Turbo Boost disabled. Here, BLAKE3 is the
@@ -509,14 +508,14 @@ SHA-3 perform relatively poorly, because their compression functions require
 64-bit arithmetic. BLAKE3 and BLAKE2s have similar performance profiles here,
 and the BLAKE3 compression function uses fewer rounds.
 
-Figures \ref{fig:avx2_rayon}, \ref{fig:avx512_c}, and \ref{fig:rpizero} also
+Figures \ref{fig:avx2_rayon}, \ref{fig:avx512}, and \ref{fig:rpizero} also
 highlight that BLAKE3 performs well for short inputs. The fixed tree structures
 of BLAKE2bp and BLAKE2sp are costly when the input is short, because they
 always compress a parent node and a fixed number of leaves. The advantage of
 their fixed tree structures, however, comes at medium input lengths around
 1--4\,KiB, where BLAKE3 does not yet have enough chunks to operate in parallel.
 This is the regime where BLAKE2bp and BLAKE2sp pull ahead of BLAKE3 in figures
-\ref{fig:avx2_rayon} and \ref{fig:avx512_c}.
+\ref{fig:avx2_rayon} and \ref{fig:avx512}.
 
 \section{Security}\label{sec:security}
 
