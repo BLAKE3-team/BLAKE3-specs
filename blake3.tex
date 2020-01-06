@@ -453,8 +453,10 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 \begin{figure}[h]
 \centering
 \input{./img/avx512.tikz}
-\caption{Cycles-per-byte for a single-threaded implementation of BLAKE3 at
-    various input lengths on an Intel Skylake-SP processor. Lower is better.}%
+\caption{Cycles-per-byte for a single-threaded implementation of BLAKE3 and
+    other hash functions at various input lengths on an AWS c5.metal instance.
+    This is an Intel Skylake-SP processor with AVX-512 support. Lower is
+    better.}%
 \label{fig:avx512}
 \end{figure}
 
@@ -462,9 +464,20 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 \centering
 %\input{./benchmarks/results/rpizero.pgf}
 \input{./img/rpizero.tikz}
-\caption{Cycles-per-byte at various input lengths on a 32-bit ARM1176
-    processor. Lower is better.}%
+\caption{Cycles-per-byte for a single-threaded implementation of BLAKE3 and
+    other hash functions at various input lengths on a Rasperry Pi Zero. This
+    is a 32-bit ARM1176 processor. Lower is better.}%
 \label{fig:rpizero}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\input{./img/threads.tikz}
+\caption{Throughput for a multi-threaded implementation of BLAKE3 with a
+    varying number of threads and at various input lengths on an AWS c5.metal
+    instance. This is a 48-physical-core Intel Skylake-SP processor with
+    AVX-512 support. Higher is better.}%
+\label{fig:threads}
 \end{figure}
 
 Several factors contribute to the performance of BLAKE3, depending on the

@@ -1,21 +1,20 @@
 #! /usr/bin/env python3
 
 import json
-import math
 from matplotlib import pyplot
-import os
 from pathlib import Path
 import pandas
 import seaborn
 import sys
 
 BENCH_NAMES = [
-    ("threads_01", "1 thread"),
-    ("threads_02", "2 threads"),
-    ("threads_04", "4 threads"),
-    ("threads_08", "8 threads"),
-    ("threads_16", "16 threads"),
+    ("threads_48", "48 threads"),
     ("threads_32", "32 threads"),
+    ("threads_16", "16 threads"),
+    ("threads_08", "8 threads"),
+    ("threads_04", "4 threads"),
+    ("threads_02", "2 threads"),
+    ("threads_01", "1 thread"),
 ]
 
 SIZES = [
@@ -46,9 +45,9 @@ def main():
     ticks = []
     tick_names = []
     throughputs = []
-    for hash_name, hash_name_pretty in BENCH_NAMES:
-        bench_names.append(hash_name_pretty)
-        hash_dir = target / "bench_group" / hash_name
+    for bench_name, bench_name_pretty in BENCH_NAMES:
+        bench_names.append(bench_name_pretty)
+        hash_dir = target / "bench_group" / bench_name
         for size_i, size in enumerate(size[0] for size in SIZES):
             estimates_path = hash_dir / str(size) / "new/estimates.json"
             try:
@@ -61,14 +60,16 @@ def main():
             point = slope["point_estimate"]
             # upper = slope["confidence_interval"]["upper_bound"]
             # lower = slope["confidence_interval"]["lower_bound"]
-            gbps_throughput = size / point
+            seconds = point / 1e9
+            bps_throughput = size / seconds
+            gibps_throughput = bps_throughput / (2 ** 30)
             if len(throughputs) == size_i:
                 throughputs.append([])
                 sizes.append(size)
                 if size in sizes_map:
                     ticks.append(size)
                     tick_names.append(sizes_map[size])
-            throughputs[size_i].append(gbps_throughput)
+            throughputs[size_i].append(gibps_throughput)
     dataframe = pandas.DataFrame(throughputs, sizes, bench_names)
 
     seaborn.set()
@@ -78,9 +79,14 @@ def main():
     # pyplot.figure(figsize=[20, 10])
     seaborn.set_context("paper")
     # seaborn.set_context("talk")
+    dash_styles = [
+        "", (4, 1.5), (1, 1), (3, 1, 1.5, 1), (5, 1, 1, 1), (5, 1, 2, 1, 2, 1),
+        (2, 2, 3, 1.5), (1, 2.5, 3, 1.2), (2, 2)
+    ]
     plot = seaborn.lineplot(
         data=dataframe,
         sort=False,
+        dashes=dash_styles,
     )
     plot.set(ylabel="Throughput (GB/s)\n")
     pyplot.ylim(0, 1.1 * max(max(col) for col in throughputs))

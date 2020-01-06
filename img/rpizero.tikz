@@ -17,7 +17,7 @@
     xmin=64,
     xmax=1048576,
 	ylabel=Throughput (cpb),
-	xlabel=Input length (bytes),
+	xlabel=Input Length,
 	xmode=log,
 	log basis x=2,
 	y tick label style={%

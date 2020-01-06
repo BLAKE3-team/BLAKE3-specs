@@ -81,6 +81,18 @@ fn benchmarks(c: &mut Criterion) {
                 b.iter(|| blake3::hash(input.get()));
             });
         })
+        // 48 is the number of physical cores on the AWS c5.metal instance
+        // which I current use to run this benchmark.
+        .with_function("threads_48", |b, param| {
+            let mut input = RandomInput::new(*param);
+            let pool = rayon::ThreadPoolBuilder::new()
+                .num_threads(48)
+                .build()
+                .unwrap();
+            pool.install(|| {
+                b.iter(|| blake3::hash(input.get()));
+            });
+        })
         .throughput(|len| Throughput::Bytes(*len as u64));
     c.bench("bench_group", b);
 }
