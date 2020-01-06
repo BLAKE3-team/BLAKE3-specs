@@ -59,21 +59,6 @@ def dense_sizes():
     return sizes
 
 
-def throughput_min_max(throughputs):
-    return min(min(v) for v in throughputs), max(max(v) for v in throughputs)
-
-
-def throughput_log_ticks(throughputs):
-    min_t = min(min(v) for v in throughputs)
-    max_t = max(max(v) for v in throughputs)
-    tick = 2**math.ceil(math.log2(max_t))
-    ticks = [tick]
-    while tick > min_t:
-        tick /= 2
-        ticks.append(int(tick) if tick >= 1 else tick)
-    return ticks
-
-
 def main():
     freq_mhz = None
     if "BENCH_FREQ_MHZ" in os.environ:
@@ -134,10 +119,10 @@ def main():
     # plot.set_title("Performance on XYZ")
     if freq_mhz is not None:
         plot.set(ylabel="Throughput (cpb)\n")
-        plot.set(yscale="log")
-        yticks = throughput_log_ticks(throughputs)
+        ymax = 10
+        yticks = list(range(0, ymax + 1))
         plot.set(yticks=yticks)
-        plot.set_yticklabels(yticks)
+        pyplot.ylim(0, ymax)
     else:
         plot.set(ylabel="Throughput (MB/s)\n")
         pyplot.ylim(0, 1.1 * max(max(col) for col in throughputs))
