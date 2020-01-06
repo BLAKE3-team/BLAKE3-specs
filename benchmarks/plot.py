@@ -15,7 +15,6 @@ HASH_NAMES = [
     ("blake3", "BLAKE3"),
 
     # Use this instead for the AVX-512 results, with --features=c_detect:
-    # ("blake3_c", "BLAKE3"),
     ("blake2s", "BLAKE2s"),
     ("blake2b", "BLAKE2b"),
     ("blake2sp", "BLAKE2sp"),
@@ -27,10 +26,10 @@ HASH_NAMES = [
 ]
 
 SIZES = [
-    (2**6, "64"),
-    (2**7, "128"),
-    (2**8, "256"),
-    (2**9, "512"),
+    (2**6, "64 B"),
+    (2**7, "128 B"),
+    (2**8, "256 B"),
+    (2**9, "512 B"),
     (2**10, "1 KiB"),
     (2**11, "2 KiB"),
     (2**12, "4 KiB"),
@@ -132,6 +131,7 @@ def main():
         sort=False,
         dashes=dash_styles,
     )
+    # plot.set_title("Performance on XYZ")
     if freq_mhz is not None:
         plot.set(ylabel="Throughput (cpb)\n")
         plot.set(yscale="log")
@@ -144,9 +144,10 @@ def main():
     plot.set(xscale="log")
     pyplot.legend(loc="best", framealpha=1)
     # pyplot.legend(loc="lower right", framealpha=1)
+    plot.set(xlabel="Input Size")
     plot.set(xticks=ticks)
-    plot.set_xticklabels(tick_names, rotation=270)
-    # pyplot.savefig(target.with_suffix(".pgf"), bbox_inches="tight")
+    plot.set_xticklabels(tick_names, rotation=90)
+    # pyplot.savefig(target.with_suffix(".svg"), bbox_inches="tight")
     pyplot.show()
 
 
