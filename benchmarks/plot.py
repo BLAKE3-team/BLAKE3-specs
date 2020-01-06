@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 
 import json
-import math
 from matplotlib import pyplot
 import os
 from pathlib import Path
@@ -10,17 +9,13 @@ import seaborn
 import sys
 
 HASH_NAMES = [
-    # Note that --features=rayon determines whether this bench uses
-    # multithreading.
     ("blake3", "BLAKE3"),
-
-    # Use this instead for the AVX-512 results, with --features=c_detect:
-    ("blake2s", "BLAKE2s"),
     ("blake2b", "BLAKE2b"),
-    ("blake2sp", "BLAKE2sp"),
+    ("blake2s", "BLAKE2s"),
     ("blake2bp", "BLAKE2bp"),
-    ("sha256", "OpenSSL SHA-256"),
+    ("blake2sp", "BLAKE2sp"),
     ("sha512", "OpenSSL SHA-512"),
+    ("sha256", "OpenSSL SHA-256"),
     ("sha3-256", "OpenSSL SHA3-256"),
     ("kangarootwelve", "KangarooTwelve"),
 ]
@@ -85,9 +80,11 @@ def main():
             point = slope["point_estimate"]
             # upper = slope["confidence_interval"]["upper_bound"]
             # lower = slope["confidence_interval"]["lower_bound"]
-            mbps_throughput = size / point * 1000
+            seconds = point / 1e9
+            bps_throughput = size / seconds
+            gibps_throughput = bps_throughput / (2 ** 30)
             if freq_mhz is not None:
-                cpb_throughput = freq_mhz / mbps_throughput
+                cpb_throughput = freq_mhz * 1e6 / bps_throughput
             if len(throughputs) == size_i:
                 throughputs.append([])
                 sizes.append(size)
@@ -97,7 +94,7 @@ def main():
             if freq_mhz is not None:
                 throughputs[size_i].append(cpb_throughput)
             else:
-                throughputs[size_i].append(mbps_throughput)
+                throughputs[size_i].append(gibps_throughput)
     dataframe = pandas.DataFrame(throughputs, sizes, hash_names)
 
     seaborn.set()
@@ -124,7 +121,7 @@ def main():
         plot.set(yticks=yticks)
         pyplot.ylim(0, ymax)
     else:
-        plot.set(ylabel="Throughput (MB/s)\n")
+        plot.set(ylabel="Throughput (GiB/s)\n")
         pyplot.ylim(0, 1.1 * max(max(col) for col in throughputs))
     plot.set(xscale="log")
     pyplot.legend(loc="best", framealpha=1)
