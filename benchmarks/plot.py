@@ -121,7 +121,7 @@ def main():
         plot.set(yticks=yticks)
         pyplot.ylim(0, ymax)
     else:
-        plot.set(ylabel="Throughput (GiB/s)\n")
+        plot.set(ylabel="Throughput (MiB/s)\n")
         pyplot.ylim(0, 1.1 * max(max(col) for col in throughputs))
     plot.set(xscale="log")
     pyplot.legend(loc="best", framealpha=1)
