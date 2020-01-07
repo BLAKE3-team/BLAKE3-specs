@@ -440,18 +440,6 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 
 \begin{figure}[h]
 \centering
-%\input{./benchmarks/results/avx2_rayon.pgf}
-\input{./img/avx2_rayon.tikz}
-\caption{Throughput for a multi-threaded implementation of BLAKE3 at various
-    input lengths on an Intel Kaby Lake processor.}
-\label{fig:avx2_rayon}
-\end{figure}
-
-% TODO: This figure compares an AVX-512 implementation of BLAKE3 to an AVX2
-% implementation of BLAKE2, making BLAKE2 look worse than it should. We need a
-% proper AVX-512 implementation of BLAKE2, using the new rotation instructions.
-\begin{figure}[h]
-\centering
 \input{./img/avx512.tikz}
 \caption{Cycles-per-byte for a single-threaded implementation of BLAKE3 and
     other hash functions at various input lengths on an AWS c5.metal instance.
