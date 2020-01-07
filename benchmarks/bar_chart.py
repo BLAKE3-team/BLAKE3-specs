@@ -2,7 +2,6 @@
 
 from matplotlib import pyplot
 from pathlib import Path
-import numpy
 import pandas
 import seaborn
 
@@ -65,6 +64,7 @@ def main():
     plot.set(ylabel=None)
     pyplot.xlim(0, 7000)
     # pyplot.savefig(THIS_FILE.with_suffix(".svg"), bbox_inches="tight")
+    # pyplot.savefig(THIS_FILE.with_suffix(".png"), bbox_inches="tight")
     pyplot.show()
 
 
