@@ -45,6 +45,14 @@ fn benchmarks(c: &mut Criterion) {
             let mut input = RandomInput::new(*param);
             b.iter(|| blake2s_simd::blake2sp::blake2sp(input.get()));
         })
+        .with_function("md5", |b, param| {
+            let mut input = RandomInput::new(*param);
+            b.iter(|| openssl::hash::hash(openssl::hash::MessageDigest::md5(), input.get()));
+        })
+        .with_function("sha1", |b, param| {
+            let mut input = RandomInput::new(*param);
+            b.iter(|| openssl::hash::hash(openssl::hash::MessageDigest::sha1(), input.get()));
+        })
         .with_function("sha256", |b, param| {
             let mut input = RandomInput::new(*param);
             b.iter(|| openssl::hash::hash(openssl::hash::MessageDigest::sha256(), input.get()));
