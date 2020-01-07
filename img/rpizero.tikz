@@ -30,7 +30,7 @@
 	xtick={64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576},
 	x tick label style={rotate=90,anchor=east}
 ]
-\legend{BLAKE3, BLAKE2b, BLAKE2s, BLAKE2bp, BLAKE2sp, SHA-512 (OpenSSL), SHA-256 (OpenSSL), KangarooTwelve}
+\legend{BLAKE3, BLAKE2b, BLAKE2s, BLAKE2bp, BLAKE2sp, SHA-512, SHA-256, KangarooTwelve}
 % blake3
 \addplot coordinates {
 (64, 30.628866117911816)
