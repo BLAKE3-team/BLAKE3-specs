@@ -32,8 +32,10 @@
 	x tick label style={rotate=90,anchor=east}
 ]
 \legend{BLAKE3, BLAKE2b, BLAKE2s, BLAKE2bp, BLAKE2sp, SHA-512 (OpenSSL), SHA-256 (OpenSSL)}
+% Use "on layer=foreground" to force this curve to the front, because it tends
+% to get hidden otherwise. See https://tex.stackexchange.com/a/350514/201018.
 % blake3
-\addplot coordinates {
+\addplot [blue, on layer=foreground] coordinates {
 (64, 4.398052769729162)
 (80, 5.77547281158591)
 (96, 4.825084954519042)

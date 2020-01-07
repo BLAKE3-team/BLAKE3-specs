@@ -66,7 +66,14 @@
   arrows
 }
 \usepackage{pgfplots}
-\pgfplotsset{compat=newest}
+\pgfplotsset{
+    compat=newest,
+    % As per https://tex.stackexchange.com/a/350514/201018, this lets us force
+    % one graph line to the top, so that it's always drawn overlapping other
+    % lines. Used in img/avx512.tikz.
+    layers/my layer set/.define layer set={main, foreground}{},
+    set layers=my layer set,
+}
 
 \definecolor{darkred}{RGB}{170,0,0}
 \definecolor{darkblue}{RGB}{0,0,170}
