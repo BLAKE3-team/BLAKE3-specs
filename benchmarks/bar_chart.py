@@ -59,7 +59,7 @@ def main():
         # linewidth=3,
     )
     show_values_on_bars(plot.axes)
-    plot.set_title("Hash function speed on AWS c5.metal, 16 KiB input")
+    plot.set_title("Performance on AWS c5.metal, 16 KiB input, 1 thread")
     plot.set(xlabel="Speed (MiB/s)")
     plot.set(ylabel=None)
     pyplot.xlim(0, 7000)
