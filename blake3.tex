@@ -520,10 +520,11 @@ Figure~\ref{fig:threads} shows the throughput of multi-threaded BLAKE3. This
 benchmark ran on the same c5.metal instance as in Figure~\ref{fig:avx512},
 which has 48 physical cores. This implementation uses the Rust Rayon library to
 manage threading, with the recursive divide-and-conquer approach described in
-\S\ref{sec:multithreading}. Below 128~KiB of input, the overhead of threading
-is high, and there is little benefit. For larger inputs, throughput scales
-nearly linearly with the number of threads, up to 16. [TODO: explain why
-scaling stops above 16 threads.]
+\S\ref{sec:multithreading}. Below 128~KiB of input on this machine, the
+overhead of threading is high, and larger numbers of threads cause a
+performance drop. For longer inputs, throughput scales nearly linearly with the
+number of threads, up to 16. Above 16 threads, throughput levels off due to
+memory bandwidth effects.
 
 Figures \ref{fig:avx512} and \ref{fig:rpizero} also highlight that BLAKE3
 performs well for very short inputs, at or below its 64-byte block size. Very
