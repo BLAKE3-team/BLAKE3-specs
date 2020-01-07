@@ -18,7 +18,7 @@ THIS_FILE = Path(__file__)
 BARS = [
     ("BLAKE3", 6164),
     ("BLAKE2b", 1312),
-    ("SHA1", 1027),
+    ("SHA-1", 1027),
     ("BLAKE2s", 876),
     ("MD5", 740),
     ("SHA-512", 720),
@@ -59,7 +59,7 @@ def main():
         # linewidth=3,
     )
     show_values_on_bars(plot.axes)
-    plot.set_title("Hash function speed for a 16 KiB input")
+    plot.set_title("Hash function speed on AWS c5.metal, 16 KiB input")
     plot.set(xlabel="Speed (MiB/s)")
     plot.set(ylabel=None)
     pyplot.xlim(0, 7000)
