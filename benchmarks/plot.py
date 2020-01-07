@@ -82,7 +82,7 @@ def main():
             # lower = slope["confidence_interval"]["lower_bound"]
             seconds = point / 1e9
             bps_throughput = size / seconds
-            gibps_throughput = bps_throughput / (2 ** 30)
+            mibps_throughput = bps_throughput / (2 ** 20)
             if freq_mhz is not None:
                 cpb_throughput = freq_mhz * 1e6 / bps_throughput
             if len(throughputs) == size_i:
@@ -94,7 +94,7 @@ def main():
             if freq_mhz is not None:
                 throughputs[size_i].append(cpb_throughput)
             else:
-                throughputs[size_i].append(gibps_throughput)
+                throughputs[size_i].append(mibps_throughput)
     dataframe = pandas.DataFrame(throughputs, sizes, hash_names)
 
     seaborn.set()
