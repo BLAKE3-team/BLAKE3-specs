@@ -166,8 +166,8 @@ GNU Coreutils, as the \texttt{generichash} API in Libsodium, and as the
 underlying hash function for Argon2~\cite{DBLP:conf/eurosp/BiryukovDK16}, the
 winner of the Password Hashing Competition in 2015.
 
-The biggest drawback of BLAKE2 has been its large number of incompatible
-variants. The performance tradeoffs between different variants are subtle, and
+A drawback of BLAKE2 has been its large number of incompatible variants.
+The performance tradeoffs between different variants are subtle, and
 library support is uneven. BLAKE2b is the most widely supported, but it is not
 the fastest on most platforms. BLAKE2bp and BLAKE2sp are more than twice as
 fast on modern x86 processors, but they are sparsely supported and rarely
@@ -178,36 +178,39 @@ designed for consistent high performance in software on all platforms. The
 biggest changes from BLAKE2 to BLAKE3 are:
 
 \begin{itemize}
-    \item An \textbf{internal tree structure}, which supports an unbounded
+    \item \textbf{A tree structure} with unbounded
         degree of parallelism. This is the largest performance improvement.
-    \item A compression function with \textbf{fewer rounds}. This is also a
-        performance improvement.
-    \item \textbf{Three domain-separated modes}: \flag{hash(input)},
-        \flag{keyed_hash(key, input)}, and
+    \item \textbf{Fewwer rounds} in the compression function  This is
+    another performance improvement.
+    \item \textbf{Three modes}: hash, keyed hash, and
+    key derivation.  This simple API replaces the BLAKE2 parameter block.
+%    \flag{hash(input)},
+ %       \flag{keyed_hash(key, input)}, and
         % Paragraph layout overruns the margin without this linebreak. But why?
-        \linebreak
-        \flag{derive_key(context, key_material)}. This three-part API replaces
-        the BLAKE2 parameter block.
+  %      \linebreak
+   %     \flag{derive_key(context, key_material)}. 
     \item \textbf{Zero-cost keying}, using the space formerly occupied by the
-        parameter block.
-    \item Built-in support for \textbf{extendable output}. Like BLAKE2X, but
-        unlike SHA\=/3 or HKDF, extended output is parallelizable and seekable.
+        parameter block, to perform keyed hashing without any overhead.
+    \item \textbf{Built-in extendable output}, parallelizable and
+    seekable (like BLAKE2X, but unlike SHA\=/3 or HKDF).
 \end{itemize}
 
-BLAKE3 splits its input into 1~KiB chunks and arranges those chunks as the
-leaves of a binary tree. This tree structure means that there is no limit to
-the parallelism that BLAKE3 can exploit, given enough
-input~\cite{DBLP:journals/tosc/AtighehchiB17,DBLP:journals/tc/AtighehchiR17}.
-The direct benefit of this parallelism is very high throughput on platforms
-with SIMD support, including all modern x86 processors. Another benefit of
-hashing chunks in parallel is that the implementation can use SIMD vectors of
-any width, regardless of the word size of the compression function. That leaves
-us free to select a compression function that is efficient on smaller
-architectures, without sacrificing peak throughput on x86\=/64.
+BLAKE3 splits its input into 1~KiB chunks arranged as the leaves of a
+binary tree, thereby increasing the parallelism degree as input size
+grows~\cite{DBLP:journals/tosc/AtighehchiB17,DBLP:journals/tc/AtighehchiR17}.
+This makes BLAKE3 very fast on modern processors, thanks to their
+multi-core and SIMD instructions.
 
-The BLAKE3 compression function is closely based on that of BLAKE2s. BLAKE3 has
+Another benefit of hashing chunks in parallel is that the implementation
+can use SIMD vectors of any width, regardless of the word size of the
+compression function. That leaves us free to select a compression
+function that is efficient on smaller architectures, without sacrificing
+peak throughput on x86\=/64. Thus our choice of BLAKE2s instead of
+BLAKE2b for the compression function.
+
+BLAKE3's compression function is indeed similar to that of BLAKE2s. BLAKE3 has
 the same 128-bit security level and 256-bit default output size. The internal
-mixing function is the same, with a simplified message schedule derived from a
+mixing logic is the same, with a simplified message schedule derived from a
 single repeated permutation. Based on existing cryptanalysis of BLAKE and
 BLAKE2, BLAKE3 reduces the number of rounds in the compression function from 10
 to 7 (see~\cite{TMC} for a detailed rationale). BLAKE3 also changes the setup
