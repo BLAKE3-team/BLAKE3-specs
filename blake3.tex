@@ -285,12 +285,69 @@ t_{0} & t_{1} & b & d
 \end{equation*}
 
 The $\IV_{0} \ldots \IV_{7}$ constants are the same as in
-BLAKE2s, and they are reproduced in Appendix~\ref{sec:ivconstants}.
+BLAKE2s, and they are reproduced in Table~\ref{tab:constants}.
+
+\begin{table}
+  \caption{Constants $\IV_0,\dots,\IV_7$ used in the initialization of BLAKE3.}%
+  \label{tab:constants}
+  \centering
+  \begin{tabular}{cc}
+    \toprule
+    $\IV_0$ & \texttt{0x6a09e667} \\
+    $\IV_1$ & \texttt{0xbb67ae85} \\
+    $\IV_2$ & \texttt{0x3c6ef372} \\
+    $\IV_3$ & \texttt{0xa54ff53a} \\
+    $\IV_4$ & \texttt{0x510e527f} \\
+    $\IV_5$ & \texttt{0x9b05688c} \\
+    $\IV_6$ & \texttt{0x1f83d9ab} \\
+    $\IV_7$ & \texttt{0x5be0cd19} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 The compression function applies a 7-round keyed permutation $v' = E(m, v)$ to
-the state $v_0 \dots v_{15}$, keyed by the message $m_0 \dots m_{15}$. The
-keyed permutation here is identical to that of BLAKE2s, and is
-reproduced in Appendix~\ref{sec:roundfn}.
+the state $v_0 \dots v_{15}$, keyed by the message $m_0 \dots m_{15}$. 
+
+The round function is the same as in BLAKE2s. A round consists of the following 8 operations:
+\begin{align*}
+\GG_{0}&(v_{0}, v_{4}, v_{8}, v_{12}) &
+\GG_{1}&(v_{1}, v_{5}, v_{9}, v_{13}) &
+\GG_{2}&(v_{2}, v_{6}, v_{10}, v_{14}) &
+\GG_{3}&(v_{3}, v_{7}, v_{11}, v_{15}) \\
+\GG_{4}&(v_{0}, v_{5}, v_{10}, v_{15}) &
+\GG_{5}&(v_{1}, v_{6}, v_{11}, v_{12}) &
+\GG_{6}&(v_{2}, v_{7}, v_{8}, v_{13}) &
+\GG_{7}&(v_{3}, v_{4}, v_{9}, v_{14})\,.
+\end{align*}
+That is, a round applies a G function to each column of the $4\times 4$ state in parallel,
+and then to each of the diagonals in parallel. 
+
+The ``quarter-round'' $\GG_i(a, b, c, d)$ is
+defined as follows. Let $\oplus$ denote xor, $+$ denote addition modulo $2^{32}$, $\ggg$ denote
+bitwise right rotation, and $m_{x}$ be the $x$th message word:
+\begin{align*}
+a \ & \leftarrow \ a + b + m_{2i+0} \\
+d \ & \leftarrow \ (d \oplus a) \ggg 16 \\
+c \ & \leftarrow \ c + d \\
+b \ & \leftarrow \ (b \oplus c) \ggg 12 \\
+a \ & \leftarrow \ a + b + m_{2i+1} \\
+d \ & \leftarrow \ (d \oplus a) \ggg 8 \\
+c \ & \leftarrow \ c + d \\
+b \ & \leftarrow \ (b \oplus c) \ggg 7
+\end{align*}
+
+After each round (except the last one where it would be useless), the message words are permuted according to Table~\ref{tab:perm}.
+
+\begin{table}
+  \centering
+  \caption{Permutational key schedule for BLAKE3's keyed permutation.}\label{tab:perm}
+  \begin{tabular}{cccccccccccccccc}
+    \toprule
+    0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 & 12 & 13 & 14 & 15 \\ \midrule
+    2 & 6 & 3 & 10 & 7 & 0 & 4 & 13 & 1 & 11 & 12 & 5 & 9 & 14 & 15 & 8 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 The output of the compression function $h_{0}' \ldots h_{15}'$ is
 defined as:
@@ -1393,73 +1450,4 @@ The development of BLAKE3 was sponsored by
 %\nocite{*}
 \bibliographystyle{plainurl}
 \bibliography{blake3}
-
-\begin{appendices}
-
-\section{IV Constants}\label{sec:ivconstants}
-
-    The constants $\IV_0 \ldots \IV_7$ used by the compression function are the
-    same as in BLAKE2s. They are:
-\begin{align*}
-    \IV_0 &= \text{\texttt{0x6a09e667}} &
-    \IV_1 &= \text{\texttt{0xbb67ae85}} \\
-    \IV_2 &= \text{\texttt{0x3c6ef372}} &
-    \IV_3 &= \text{\texttt{0xa54ff53a}} \\
-    \IV_4 &= \text{\texttt{0x510e527f}} &
-    \IV_5 &= \text{\texttt{0x9b05688c}} \\
-    \IV_6 &= \text{\texttt{0x1f83d9ab}} &
-    \IV_7 &= \text{\texttt{0x5be0cd19}}
-\end{align*}
-
-\section{Round Function}\label{sec:roundfn}
-
-    The compression function transforms the internal state $v_{0} \ldots
-    v_{15}$ through a sequence of 7 rounds. The round function is the same as
-    in BLAKE2s. A round does:
-\begin{align*}
-    \GG_{0}&(v_{0}, v_{4}, v_{8}, v_{12}) &
-    \GG_{1}&(v_{1}, v_{5}, v_{9}, v_{13}) &
-    \GG_{2}&(v_{2}, v_{6}, v_{10}, v_{14}) &
-    \GG_{3}&(v_{3}, v_{7}, v_{11}, v_{15}) \\
-    \GG_{4}&(v_{0}, v_{5}, v_{10}, v_{15}) &
-    \GG_{5}&(v_{1}, v_{6}, v_{11}, v_{12}) &
-    \GG_{6}&(v_{2}, v_{7}, v_{8}, v_{13}) &
-    \GG_{7}&(v_{3}, v_{4}, v_{9}, v_{14})
-\end{align*}
-
-    That is, a round applies a G function to each of the columns in parallel,
-    and then to each of the diagonals in parallel. $\GG_i(a, b, c, d)$ is
-    defined as follows. $\oplus$~denotes bitwise exclusive-or, $\ggg$~denotes
-    bitwise right rotation, and $m_{\sigma_r(x)}$ is the message word whose
-    index is the $x$\textsuperscript{th} entry in the message schedule for
-    round $r$:
-\begin{align*}
-    a \ & \leftarrow \ a + b + m_{\sigma_r(2i)} \\
-    d \ & \leftarrow \ (d \oplus a) \ggg 16 \\
-    c \ & \leftarrow \ c + d \\
-    b \ & \leftarrow \ (b \oplus c) \ggg 12 \\
-    a \ & \leftarrow \ a + b + m_{\sigma_r(2i+1)} \\
-    d \ & \leftarrow \ (d \oplus a) \ggg 8 \\
-    c \ & \leftarrow \ c + d \\
-    b \ & \leftarrow \ (b \oplus c) \ggg 7
-\end{align*}
-
-    The message schedules $\sigma_r$ are:
-
-\begin{center}
-\begin{tabular}{ | r | r r r r r r r r r r r r r r r r | }
-    \hline
-    $\sigma_0$ & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 & 12 & 13 & 14 & 15 \\
-    $\sigma_1$ & 14 & 10 & 4 & 8 & 9 & 15 & 13 & 6 & 1 & 12 & 0 & 2 & 11 & 7 & 5 & 3 \\
-    $\sigma_2$ & 11 & 8 & 12 & 0 & 5 & 2 & 15 & 13 & 10 & 14 & 3 & 6 & 7 & 1 & 9 & 4 \\
-    $\sigma_3$ & 7 & 9 & 3 & 1 & 13 & 12 & 11 & 14 & 2 & 6 & 5 & 10 & 4 & 0 & 15 & 8 \\
-    $\sigma_4$ & 9 & 0 & 5 & 7 & 2 & 4 & 10 & 15 & 14 & 1 & 11 & 12 & 6 & 8 & 3 & 13 \\
-    $\sigma_5$ & 2 & 12 & 6 & 10 & 0 & 11 & 8 & 3 & 4 & 13 & 7 & 5 & 15 & 14 & 1 & 9 \\
-    $\sigma_6$ & 12 & 5 & 1 & 15 & 14 & 13 & 4 & 10 & 0 & 7 & 6 & 3 & 9 & 2 & 8 & 11 \\
-    \hline
-\end{tabular}
-\end{center}
-
-\end{appendices}
-
 \end{document}
