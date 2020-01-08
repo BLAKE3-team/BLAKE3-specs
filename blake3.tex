@@ -8,7 +8,7 @@
   pdffitwindow=false,   % window fit to page when opened
   pdfstartview={FitH},  % fits the width of the page to the window
   pdftitle={BLAKE3},    % title
-  pdfauthor={TODO},     % author
+  pdfauthor={BLAKE3 team},     % author
   pdfsubject={BLAKE3},  % subject of the document
   pdfnewwindow=true,    % links in new window
   colorlinks=true,      % false: boxed links; true: colored links
@@ -665,9 +665,16 @@ and then on BLAKE2~\cite{DBLP:conf/ctrsa/0001KNWW14,DBLP:conf/cisc/Hao14,DBLP:co
 
 Furthermore, our own searches for good\footnote{Optimal under certain assumptions, which are not entirely correct, cf. \cite{cryptoeprint:2013:328}. Nevertheless we find these results useful as a first approximation.} differential trails, shown in Table~\ref{tab:trails}, show that by restricting input differences the initialization of BLAKE2/3 makes things harder for the attacker, with probabilities quickly becoming very low. This was also observed in~\cite[\S7]{DBLP:conf/ctrsa/0001KNWW14}. 
 
-The boomerang attacks of, e.g., \cite{DBLP:conf/cisc/Hao14,DBLP:conf/fse/BiryukovNR11,DBLP:journals/iet-ifs/BaiYWW15} exploit the high probabilities on the first few rounds to connect two trails and get through a few more rounds. This is a usual trick to get around the very quick lowering of probabilities in ARX constructs, along with differential-linear attacks. But such attacks do not present a threat to BLAKE3, considering its $128$-bit security target, and input constraints on the compression function (i.e., the IV constants). \alert{This paragraph is overly informal and doesn't really say much. Could be removed.}
+The boomerang attacks of, e.g.,
+\cite{DBLP:conf/cisc/Hao14,DBLP:conf/fse/BiryukovNR11,DBLP:journals/iet-ifs/BaiYWW15}
+exploit the high probabilities on the first few rounds to connect two
+trails and get through a few more rounds. This is an established
+technique to get around the quick lowering of differential
+characteristics' probabilities. But such attacks do not present a threat
+to BLAKE3, considering its input constraints on the compression function
+(that is, the IV constants), plus the margin $128$-bit security target.
 
-The more general survey and analysis in~\cite{TMC} also pleads in favor
+The general survey and analysis in~\cite{TMC} also pleads in favor
 of reduced round values, arguing that BLAKE2s and BLAKE2b would be as
 safe with 7 and 8 rounds, respectively.
 
@@ -698,9 +705,8 @@ BLAKE2b or BLAKE2s, and it will be familiar to implementers of other hash
 functions. The CV stack is less familiar. Simplifying the management of the CV
 stack is especially important for a clear and correct implementation of BLAKE3.
 This section describes how this is done in the
-\href{https://github.com/veorq/BLAKE3/blob/master/reference_impl/reference_impl.rs}{reference
+\href{https://github.com/BLAKE3-team/BLAKE3/blob/master/reference_impl/}{reference
 implementation}, as an aid to implementers.
-% TODO: repoint this to BLAKE3-team and a specific tag
 
 \subsubsection{Chunk State}\label{sec:chunkstate}
 
@@ -960,6 +966,7 @@ context string of any length and key material of any length, and it returns a
 derived key of any length. The context string should be hardcoded, globally
 unique, and application-specific. A good default format for context strings is
 \texttt{"[application] [commit timestamp] [purpose]"}, e.g.,
+\texttt{"example.com 2019-12-25 16:18:03 session tokens v1"}. 
 \texttt{"example.com 2019-12-25 16:18:03 session tokens v1"}. This mode should
 not be used with a variable context string, unless that variable is itself a
 context parameter from a higher level API with the same documented security
@@ -978,12 +985,15 @@ HMAC and HKDF. The only limitation in practice is algorithms that forbid key
 reuse entirely, like a one-time pad. (For other theoretical limitations, see
 \S\ref{sec:reusedkeys}.)
 
-Normally, using the same key with multiple algorithms is forbidden. Many
-algorithms are built from the same primitives, and it can be difficult to know
-when two algorithms might have related output, or when one algorithm might
-publish a value that another algorithm considers secret. One especially
-relevant example of this problem is HMAC and HKDF themselves. Although these
-algorithms have entirely different purposes, HKDF is defined in terms of HMAC.
+In general, using the same key with multiple algorithms is not
+recommended. Some algorithms are built from the same core components,
+and it can be difficult to know when two algorithms might have related
+output, or when one algorithm might publish a value that another
+algorithm considers secret. 
+One especially relevant example of this problem is HMAC and HKDF
+themselves. 
+Although these algorithms have entirely different purposes, HKDF is
+defined in terms of HMAC.
 In fact, in the ``expand only'' mode of HKDF, its output is equivalent to a
 single call to HMAC. If an application used the same key with HMAC and with
 HKDF, and an HMAC input happened to collide with an HKDF context string, this
@@ -1398,7 +1408,6 @@ approach used to derive SHA\=/512/256 from SHA\=/512. The same approach could wo
 for a hypothetical derivative of BLAKE3 by changing the $IV_0 \ldots IV_3$
 constants, which are used for compression function setup in all modes.
 
-% TODO: Let me know what you guys think about having an Acknowledgments section.
 \section*{Acknowledgments}\label{sec:acknowledgments}
 
 The development of BLAKE3 was sponsored by
