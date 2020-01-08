@@ -555,9 +555,9 @@ lengths, where BLAKE3 does not yet have enough chunks to operate in parallel.
 This is the regime around 1--4\,KiB in Figure~\ref{fig:avx512}, where BLAKE2bp
 and BLAKE2sp pull ahead.
 
-The SHA\=/2 implementations used in these benchmarks are from OpenSSL, and the
-KangarooTwelve implementations are from the eXtended Keccak Code Package
-(compiled with \texttt{gcc -Os} for the ARM1176).
+The SHA\=/2 implementations used in these benchmarks are from OpenSSL 1.1.1.d,
+and the KangarooTwelve implementations are from the eXtended Keccak Code
+Package (compiled with \texttt{gcc -Os} for the ARM1176).
 
 \section{Security}\label{sec:security}
 
