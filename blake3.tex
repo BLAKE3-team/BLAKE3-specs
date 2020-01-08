@@ -178,12 +178,12 @@ designed for consistent high performance in software on all platforms. The
 biggest changes from BLAKE2 to BLAKE3 are:
 
 \begin{itemize}
-    \item \textbf{A tree structure} with unbounded
-        degree of parallelism. This is the largest performance improvement.
-    \item \textbf{Fewwer rounds} in the compression function  This is
-    another performance improvement.
+    \item \textbf{A binary tree structure}, providing an unbounded
+        degree of parallelism. 
+    \item \textbf{Fewer rounds} in the BLAKE2s-based compression
+    function (7 instead of 10).
     \item \textbf{Three modes}: hash, keyed hash, and
-    key derivation.  This simple API replaces the BLAKE2 parameter block.
+    key derivation.  This simple API replaces and simplifies the BLAKE2 parameter block.
 %    \flag{hash(input)},
  %       \flag{keyed_hash(key, input)}, and
         % Paragraph layout overruns the margin without this linebreak. But why?
@@ -191,8 +191,9 @@ biggest changes from BLAKE2 to BLAKE3 are:
    %     \flag{derive_key(context, key_material)}. 
     \item \textbf{Zero-cost keying}, using the space formerly occupied by the
         parameter block, to perform keyed hashing without any overhead.
-    \item \textbf{Built-in extendable output}, parallelizable and
-    seekable (like BLAKE2X, but unlike SHA\=/3 or HKDF).
+    \item \textbf{Built-in extendable output} (a.k.a. XOF),
+    parallelizable and seekable, like BLAKE2X, but unlike SHA\=/3 or
+    HKDF.
 \end{itemize}
 
 BLAKE3 splits its input into 1~KiB chunks arranged as the leaves of a
@@ -200,7 +201,6 @@ binary tree, thereby increasing the parallelism degree as input size
 grows~\cite{DBLP:journals/tosc/AtighehchiB17,DBLP:journals/tc/AtighehchiR17}.
 This makes BLAKE3 very fast on modern processors, thanks to their
 multi-core and SIMD instructions.
-
 Another benefit of hashing chunks in parallel is that the implementation
 can use SIMD vectors of any width, regardless of the word size of the
 compression function. That leaves us free to select a compression
@@ -221,12 +221,12 @@ structure, more efficient keying, and extendable output.
 
 \subsection{Tree Structure}\label{sec:tree}
 
-BLAKE3 splits its input into chunks of up to 1024 bytes and arranges those
-chunks as the leaves of a binary tree. The last chunk may be shorter, but not
-empty, unless the entire input is empty. If there is only one chunk, that chunk
-is the root node and only node of the tree. Otherwise, the chunks are assembled
-with parent nodes, each parent node having exactly two children. The
-structure of the tree is determined by two rules:
+The input of BLAKE3 is split into contiguous chunks  of 1024 bytes, such
+that the last chunk may be shorter, but not empty, unless the entire input is empty. 
+If there is only one chunk, that chunk
+is the root node and only node of the tree. 
+Otherwise, the chunks are assembled with parent nodes, each parent node having exactly two children. 
+Two rules determine the structure of the tree:
 \begin{enumerate}
     \item Left subtrees are full. Each left subtree is a complete binary tree,
         with all its chunks at the same depth, and a number of chunks that is a
@@ -255,17 +255,16 @@ supports input of any byte length $0 \leq \ell < 2^{64}$.
 
 \subsection{Compression Function}\label{sec:compression}
 
-The compression function takes an 8-word chaining value, a 16-word message
-block, and 4 other parameter words, and it returns a new 16-word value. A word
-is 32 bits. The inputs are:
+The compression function works with 32-bit words, and takes the
+following inputs:
 
 \begin{itemize}
-    \item The input chaining value, $h_{0} \ldots h_{7}$.
-    \item The message block, $m_{0} \ldots m_{15}$.
+    \item The input chaining value, $h_{0} \ldots h_{7}$ (256 bits).
+    \item The message block, $m_{0} \ldots m_{15}$  (512 bits).
     \item A 64-bit counter, $t=t_{0},t_{1}$, with $t_{0}$ the lower order word
         and $t_{1}$ the higher order word.
-    \item The number of input bytes in the block, $b$.
-    \item A set of domain separation bit flags, $d$.
+    \item The number of input bytes in the block, $b$ (32 bits).
+    \item A set of domain separation bit flags, $d$ (32 bits).
 \end{itemize}
 
 The compression function initializes its 16-word internal state $v_{0} \ldots
@@ -290,9 +289,9 @@ t_{0} & t_{1} & b & d
 The $\IV_{0} \ldots \IV_{7}$ constants are the same as in
 BLAKE2s, and they are reproduced in Appendix~\ref{sec:ivconstants}.
 
-The compression function applies a 7-round keyed permutation $v' = E(m, v)$ to
-the state $v_0 \dots v_{15}$, keyed by the message $m_0 \dots m_{15}$. The
-keyed permutation here is identical to that of BLAKE2s, and is
+The compression function applies a 7-round permutation $v' = E(m, v)$ to
+the state $v_0 \dots v_{15}$, keyed by the message $m_0 \dots m_{15}$. 
+The keyed permutation here is similar to that of BLAKE2s, and is
 reproduced in Appendix~\ref{sec:roundfn}.
 
 The output of the compression function $h_{0}' \ldots h_{15}'$ is
@@ -577,7 +576,7 @@ multi-target attacks.
 
 \subsection{Compression Function}\label{sec:compressindiff}
 
-The BLAKE3 compression function is identical to that of BLAKE2s, with
+The BLAKE3 compression function is similar to that of BLAKE2s, with
 the exception that:
 
 \begin{itemize}
