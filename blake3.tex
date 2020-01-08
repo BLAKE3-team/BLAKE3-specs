@@ -501,11 +501,12 @@ effects appear for very long inputs.
 
 On this platform, the biggest performance difference between algorithms is how
 much they can benefit from SIMD. Only BLAKE3 and KangarooTwelve are able to
-take full advantage of AVX-512. The fixed tree structures of BLAKE2bp and
-BLAKE2sp limit those algorithms to 256-bit vectors. Other hash functions are
-much slower, because they cannot compress multiple blocks in parallel. BLAKE3
-and KangarooTwelve are very close in peak throughput, but KangarooTwelve needs
-more input to reach its peak, in part because of its larger 8~KiB chunk size.
+take full advantage of AVX-512. The fixed-interleaved tree structures of
+BLAKE2bp and BLAKE2sp limit those algorithms to 256-bit vectors. Other hash
+functions are much slower, because they cannot compress multiple blocks in
+parallel. BLAKE3 and KangarooTwelve are very close in peak throughput, but
+KangarooTwelve needs more input to reach its peak, in part because of its
+larger 8~KiB chunk size.
 
 \begin{figure}[h]
 \centering
