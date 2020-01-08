@@ -445,34 +445,6 @@ outputs of different lengths. Shorter outputs are prefixes of longer ones.
 
 \section{Performance}\label{sec:performance}
 
-\begin{figure}[h]
-\centering
-\input{./img/avx512.tikz}
-\caption{Throughput for single-threaded BLAKE3 and other hash functions on an
-    AWS c5.metal instance, measured in cycles per byte. This is an Intel
-    Cascade Lake-SP processor with AVX-512 support. Lower is faster.}%
-\label{fig:avx512}
-\end{figure}
-
-\begin{figure}[h]
-\centering
-%\input{./benchmarks/results/rpizero.pgf}
-\input{./img/rpizero.tikz}
-\caption{Throughput for single-threaded BLAKE3 and other hash functions on a
-    Rasperry Pi Zero, measured in cycles per byte. This is a 32-bit ARM1176
-    processor. Lower is faster.}%
-\label{fig:rpizero}
-\end{figure}
-
-\begin{figure}[h]
-\centering
-\input{./img/threads.tikz}
-    \caption{Throughput for multi-threaded BLAKE3 on the same c5.metal instance
-    as in Figure~\ref{fig:avx512}, measured in GiB/s, varying the number of
-    threads. This machine has 48 physical cores. Higher is faster.}%
-\label{fig:threads}
-\end{figure}
-
 Several factors contribute to the performance of BLAKE3, depending on the
 platform and the size of the input:
 
@@ -484,62 +456,102 @@ platform and the size of the input:
         (cf.~\S\ref{sec:multithreading}). This is the subject of
         Figure~\ref{fig:threads}. Note that Figures \ref{fig:avx512} and
         \ref{fig:rpizero} are single-threaded.
-    \item The compression function uses fewer rounds than in BLAKE2s. This
+    \item The compression function performs fewer rounds than in BLAKE2s. This
         improves performance across the board, but it is especially visible in
         the difference between BLAKE3 and BLAKE2s in Figure~\ref{fig:rpizero}.
-    \item The compression function uses 32-bit words, which perform well on
-        smaller architectures. This is the subject of Figure~\ref{fig:rpizero}.
-    \item The compression function has a relatively small block size, which
-        performs well for very short inputs. This is visible at 64 bytes (the
-        left edge) in Figures \ref{fig:avx512} and \ref{fig:rpizero}.
+    \item The compression function uses 32-bit words (cf.
+        \S\ref{sec:wordsize}), which perform well on smaller architectures.
+        This is the subject of Figure~\ref{fig:rpizero}.
+    \item The 64-byte block size is relatively small, which helps performance
+        for very short inputs. This is visible at 64 bytes (the left edge) in
+        Figures \ref{fig:avx512} and \ref{fig:rpizero}.
 \end{itemize}
+
+\begin{figure}[h]
+\centering
+\input{./img/avx512.tikz}
+\caption{Throughput for single-threaded BLAKE3 and other hash functions on an
+    AWS c5.metal instance, measured in cycles per byte. This is an Intel
+    Cascade Lake-SP processor with AVX-512 support. Lower is faster.}%
+\label{fig:avx512}
+\end{figure}
 
 Figure~\ref{fig:avx512} shows the throughput of single-threaded BLAKE3 on
 modern server hardware. This benchmark ran on an AWS c5.metal instance with a
-pair of Intel 8275CL (Cascade Lake-SP) processors, which support AVX-512 vector
-instructions. Here, the biggest difference between algorithms is how much they
-can benefit from SIMD. The performance jumps for BLAKE3 at 4, 8, and 16~KiB are
-the points where it begins compressing 4, 8, and 16 chunks in parallel, using
-128-bit, 256-bit, and finally 512-bit SIMD vectors. Only BLAKE3 and
-KangarooTwelve are able to take full advantage of AVX-512. The fixed tree
-structures of BLAKE2bp and BLAKE2sp limit those algorithms to 256-bit vectors.
-Other hash functions fall farther behind, because they cannot compress multiple
-blocks in parallel. BLAKE3 and KangarooTwelve are very close in peak
-throughput, but KangarooTwelve requires a longer input to reach its peak, in
-part because of its larger 8~KiB chunk size.
+pair of Intel Cascade Lake-SP 8275CL processors, which support AVX-512 vector
+instructions.
+
+The BLAKE3 curve passes through several different regimes in this figure. For a
+single chunk of input, up to 1~KiB, BLAKE3 closely mirrors BLAKE2s (as it does
+throughout all of Figure~\ref{fig:rpizero}). This is because their compression
+functions are very similar, apart from the number of rounds. Between 1 and
+4~KiB, the gap between BLAKE3 and BLAKE2s closes slightly. This is because
+BLAKE3 begins dividing its input into multiple chunks with parent nodes, and
+compressing the parent nodes adds overhead. At 4~KiB, BLAKE3 begins compressing
+multiple chunks in parallel. Parallel chunk compression can use 128-bit SSE
+vectors at 4~KiB, 256-bit AVX2 vectors at 8~KiB, and 512-bit AVX-512 vectors at
+16~KiB. Beyond 16~KiB, throughput is relatively stable, until memory bandwidth
+effects appear for very long inputs.
+
+On this platform, the biggest performance difference between algorithms is how
+much they can benefit from SIMD. Only BLAKE3 and KangarooTwelve are able to
+take full advantage of AVX-512. The fixed tree structures of BLAKE2bp and
+BLAKE2sp limit those algorithms to 256-bit vectors. Other hash functions are
+much slower, because they cannot compress multiple blocks in parallel. BLAKE3
+and KangarooTwelve are very close in peak throughput, but KangarooTwelve needs
+more input to reach its peak, in part because of its larger 8~KiB chunk size.
+
+\begin{figure}[h]
+\centering
+%\input{./benchmarks/results/rpizero.pgf}
+\input{./img/rpizero.tikz}
+\caption{Throughput for single-threaded BLAKE3 and other hash functions on a
+    Rasperry Pi Zero, measured in cycles per byte. This is a 32-bit ARM1176
+    processor. Lower is faster.}%
+\label{fig:rpizero}
+\end{figure}
 
 Figure~\ref{fig:rpizero} shows the throughput of single-threaded BLAKE3 on a
 smaller embedded platform. This benchmark ran on a Raspberry Pi Zero with a
 32-bit ARM1176 processor. Here, the biggest difference between algorithms is
-whether they use 32-bit or 64-bit words. BLAKE3 and BLAKE2s have similar
-performance profiles here, because their compression functions are closely
-related, and because there is no multi-core or SIMD parallelism for BLAKE3 to
-exploit.
+whether they use 32-bit or 64-bit words. As noted above, BLAKE3 and BLAKE2s
+have similar performance profiles here, because their compression functions are
+closely related, and because there is no multi-core or SIMD parallelism for
+BLAKE3 to exploit.
+
+\begin{figure}[h]
+\centering
+\input{./img/threads.tikz}
+    \caption{Throughput for multi-threaded BLAKE3 on the same c5.metal instance
+    as in Figure~\ref{fig:avx512}, measured in GiB/s, varying the number of
+    threads. This machine has 48 physical cores. Higher is faster.}%
+\label{fig:threads}
+\end{figure}
 
 Figure~\ref{fig:threads} shows the throughput of multi-threaded BLAKE3. This
 benchmark ran on the same c5.metal instance as in Figure~\ref{fig:avx512},
 which has 48 physical cores. This implementation uses the Rust Rayon library to
 manage threading, with the recursive divide-and-conquer approach described in
-\S\ref{sec:multithreading}. Below 128~KiB of input on this machine, the
-overhead of threading is high, and larger numbers of threads cause a
-performance drop. For longer inputs, throughput scales nearly linearly with the
-number of threads, up to 16. Above 16 threads, throughput levels off due to
-memory bandwidth effects.
+\S\ref{sec:multithreading}. Below 128~KiB of input, the overhead of threading
+is high, and increasing the number of threads causes a performance drop. For
+longer inputs, throughput scales almost linearly with the number of threads, up
+to 16 threads. Above 16 threads, throughput levels off due to memory bandwidth
+effects.
 
 Figures \ref{fig:avx512} and \ref{fig:rpizero} also highlight that BLAKE3
 performs well for very short inputs, at or below its 64-byte block size. Very
 short inputs get padded up to a full block, and algorithms with smaller block
-sizes benefit from compressing less padding. The fixed tree structures of
-BLAKE2bp and BLAKE2sp are especially costly when the input is short, because
-they always compress a parent node and a fixed number of leaves. The advantage
-of a fixed tree structure comes at medium input lengths, where a gradual tree
-structure does not yet have enough chunks to operate in parallel. This is the
-regime around 1--4\,KiB in Figure~\ref{fig:avx512}, where BLAKE2bp and BLAKE2sp
-pull ahead.
+sizes benefit from compressing less padding. The fixed-interleaved tree
+structures of BLAKE2bp and BLAKE2sp are especially costly when the input is
+short, because they always compress a parent node and a fixed number of leaves.
+The advantage of a fixed-interleaved tree structure comes at medium input
+lengths, where BLAKE3 does not yet have enough chunks to operate in parallel.
+This is the regime around 1--4\,KiB in Figure~\ref{fig:avx512}, where BLAKE2bp
+and BLAKE2sp pull ahead.
 
 The SHA\=/2 implementations used in these benchmarks are from OpenSSL, and the
 KangarooTwelve implementations are from the eXtended Keccak Code Package
-(compiled with \texttt{gcc -Os} for Figure~\ref{fig:rpizero}).
+(compiled with \texttt{gcc -Os} for the ARM1176).
 
 \section{Security}\label{sec:security}
 
