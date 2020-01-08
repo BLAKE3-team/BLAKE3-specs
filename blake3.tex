@@ -553,7 +553,7 @@ platform and the size of the input:
 
 Figure~\ref{fig:avx512} shows the throughput of single-threaded BLAKE3 on
 modern server hardware. This benchmark ran on an AWS c5.metal instance with a
-pair of Intel 8275CL (Cascade Lake-SP) processors, which support AVX-512 vector
+pair of Intel Xeon Platinum 8275CL (Cascade Lake-SP) processors, which support AVX-512 vector
 instructions. Here, the biggest difference between algorithms is how much they
 can benefit from SIMD. The performance jumps for BLAKE3 at 4, 8, and 16~KiB are
 the points where it begins compressing 4, 8, and 16 chunks in parallel, using
@@ -594,7 +594,7 @@ structure does not yet have enough chunks to operate in parallel. This is the
 regime around 1--4\,KiB in Figure~\ref{fig:avx512}, where BLAKE2bp and BLAKE2sp
 pull ahead.
 
-The SHA\=/2 implementations used in these benchmarks are from OpenSSL, and the
+The SHA\=/2 implementations used in these benchmarks are from OpenSSL 1.1.1d, and the
 KangarooTwelve implementations are from the eXtended Keccak Code Package
 (compiled with \texttt{gcc -Os} for Figure~\ref{fig:rpizero}).
 
@@ -616,13 +616,13 @@ multi-target attacks.
 
 \subsection{Compression Function}\label{sec:compressindiff}
 
-The BLAKE3 compression function is identical to that of BLAKE2s, with
+The BLAKE3 compression function is, at a high-level, identical to that of BLAKE2s, with
 the exception that:
 
 \begin{itemize}
   \item BLAKE2's $f_0$ and $f_1$ ``flags'' are replaced by the $b$ and $d$ inputs, which
   encode the functional context of the compression function instance.
-  \item Finalization returns $16$ words instead of $8$, and only applies feed-forward on the second half of the output.
+  \item Finalization returns $16$ words instead of $8$, and only applies the feed-forward only on the second half of the output.
 \end{itemize}
 
 The latter change causes the BLAKE3 function to no longer be indifferentiable, unlike its predecessor~\cite{DBLP:journals/tosc/LuykxMN16}. Indeed, an attacker with oracle access to $C(\dots)$ and $E(\dots)$ that obtains $y = C(x, m, b, d)$ can compute $(x, b, d) = E^{-1}(m, (y_l, y_h) \oplus (y_h, 0) \oplus (0, x_l))$; a simulator with access to a random oracle can not perform the same inversion, and as such this scheme---much like Davies-Meyer---is not indifferentiable from a random oracle. This causes some surmountable complications in the next section.
@@ -717,9 +717,13 @@ safe with 7 and 8 rounds, respectively.
   \begin{tabular}{lccccccc}
     \toprule
     Function & 0.5   & 1     & 1.5   & 2     & 2.5   & 3     & 3.5 \\ \midrule
-    BLAKE-256 c.f. & $2^{-0}$ & $2^{-0}$ & $2^{-0}$ & $2^{-1}$ & $2^{-6}$ & $2^{-7}$ & $2^{-38}$  \\
-    BLAKE\{2s,3\} c.f.   &  $2^{-0}$  & $2^{-0}$ &  $2^{-0}$  & $2^{-1}$ & $2^{-32}$   & $\left[2^{-88}, 2^{-48}\right)$ & -  \\
-    BLAKE\{-256,2s,3\} (hash) & $2^{-0}$ & $2^{-1}$ & $2^{-32}$ & ${\ge 2^{-190}}^\ast$ & - & - & -  \\ % 2^{-190} with 8-symmetric $\Delta$, $2^{-230}$ with 4-symmetric $\Delta$ m10 = 0x88888888
+    BLAKE-256 k.p/c.f. & $2^{-0}$ & $2^{-0}$ & $2^{-0}$ & $2^{-1}$ & $2^{-6}$ & $2^{-7}$ & $2^{-38}$  \\
+    BLAKE2s k.p. & $2^{-0}$ & $2^{-0}$ & $2^{-0}$ & $2^{-1}$ & $2^{-6}$ & $2^{-7}$ & $2^{-38}$  \\
+    BLAKE3 k.p. & $2^{-0}$ & $2^{-0}$ & $2^{-0}$ & $2^{-1}$ & $2^{-7}$ & $2^{-21}$ & $2^{-52}$  \\
+    BLAKE2s c.f.  &  $2^{-0}$  & $2^{-0}$ &  $2^{-0}$  & $2^{-1}$ & $2^{-32}$   & $\left[2^{-88}, 2^{-48}\right)$ & -  \\
+    BLAKE3 c.f.   &  $2^{-0}$  & $2^{-0}$ &  $2^{-0}$  & $2^{-1}$ & $2^{-32}$   & - & -  \\
+    BLAKE\{-256,2s\} (hash) & $2^{-0}$ & $2^{-1}$ & $2^{-32}$ & ${\ge 2^{-190}}^\ast$ & - & - & -  \\ % 2^{-190} with 8-symmetric $\Delta$, $2^{-230}$ with 4-symmetric $\Delta$ m10 = 0x88888888
+    BLAKE3 (hash) & $2^{-0}$ & $2^{-1}$ & $2^{-32}$ & - & - & - & -  \\ 
     BLAKE-256 c.f. (fixed $m$) & $2^{-0}$ & $2^{-2}$ & $2^{-12}$ & $2^{-39}$ & - & - & - \\
     BLAKE\{2s,3\} c.f. (fixed $m$) & $2^{-0}$ & $2^{-7}$ & $2^{-32}$ & ${\ge 2^{-161}}^\ast$ & - & - & - \\ % 2^{-161} with 8-symmetric $\Delta$, $2^{-161}$ with 4-symmetric $\Delta$
     \bottomrule
@@ -1267,6 +1271,40 @@ makes the output use all the state words computed during the last round.
 The default 32-byte output size is a truncated output, and
 truncated outputs are also used for chaining values in the interior of the
 tree.
+
+\subsection{Keyed Permutation Key Schedule}\label{sec:keysched}
+
+One of the main historical pain points of implementing BLAKE and BLAKE2 has been the distinct message permutation at each round. This had several effects, including forcing the complete unrolling of the keyed permutation to maximize speed, complicated and error-prone implementation of the permutations in the SIMD case, and complications in the analysis (e.g., some attacks do not start at round 0 because the permutation is most attack-friendly at some later point.)
+
+To this end, we decided to replace the 10 distinct permutations by a single one, which is applied to the message after each round. The criteria for selecting the permutation were similar to the ones used for BLAKE\footnote{One of the requirements, regarding constants, was discarded since it does not apply to BLAKE3.}:
+\begin{itemize}
+  \item For 8 rounds, no message word should be input twice at the same point;
+  \item For 8 rounds, each message should appear exactly 4 times in a column step and 4 times in a diagonal step;
+  \item For 8 rounds, each message word should appear exactly 4 times in the first position in G and 4 times in the second one.
+\end{itemize}
+For 8 rounds, there are exactly 12 permutations that satisfy these requirements, cf. Table~\ref{tab:candidates}.
+\begin{table}
+\centering
+\caption{Candidate permutations for BLAKE3's single-permutation key schedule.}\label{tab:candidates}
+\begin{tabular}{cccccccccccccccc}
+\toprule
+6 & 4 & 1 & 7 & 15 & 2 & 3 & 10 & 0 & 8 & 11 & 9 & 13 & 5 & 12 & 14\\\midrule
+13 & 9 & 8 & 14 & 12 & 10 & 1 & 3 & 15 & 4 & 7 & 6 & 0 & 11 & 2 & 5\\\midrule
+15 & 14 & 13 & 12 & 10 & 11 & 8 & 9 & 7 & 5 & 6 & 4 & 2 & 1 & 0 & 3\\\midrule
+7 & 13 & 12 & 8 & 3 & 15 & 5 & 1 & 6 & 2 & 0 & 14 & 10 & 9 & 4 & 11\\\midrule
+12 & 0 & 5 & 6 & 8 & 14 & 7 & 4 & 9 & 10 & 13 & 15 & 11 & 3 & 1 & 2\\\midrule
+5 & 3 & 6 & 13 & 0 & 9 & 12 & 8 & 4 & 14 & 2 & 7 & 15 & 10 & 11 & 1\\\midrule
+14 & 7 & 11 & 1 & 5 & 6 & 2 & 0 & 10 & 3 & 9 & 13 & 4 & 15 & 8 & 12\\\midrule
+4 & 2 & 9 & 0 & 14 & 1 & 13 & 11 & 12 & 6 & 15 & 3 & 5 & 8 & 10 & 7\\\midrule
+2 & 6 & 3 & 10 & 7 & 0 & 4 & 13 & 1 & 11 & 12 & 5 & 9 & 14 & 15 & 8\\\midrule
+10 & 11 & 4 & 15 & 1 & 3 & 0 & 2 & 14 & 12 & 5 & 8 & 6 & 7 & 13 & 9\\\midrule
+3 & 12 & 7 & 11 & 13 & 4 & 9 & 15 & 5 & 0 & 8 & 1 & 14 & 2 & 6 & 10\\\midrule
+9 & 5 & 0 & 2 & 11 & 8 & 14 & 12 & 13 & 15 & 3 & 10 & 1 & 6 & 7 & 4\\ \bottomrule
+\end{tabular}
+\end{table}
+Of these, one of them clearly stood out as having the lowest differential probability trail for the keyed permutation after 3 rounds---$2^{-21}$ compared to $2^{-13}$ for the next best permutations, and thus was the one adopted.
+
+As can be deduced from Table~\ref{tab:trails}, the security of the keyed permutation (with respect to differential cryptanalysis) for the new single-permutation schedule appears to be slightly improved in comparison to the one from BLAKE and BLAKE2. 
 
 \subsection{Chunk Counter}\label{sec:chunkcounter}
 
