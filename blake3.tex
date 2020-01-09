@@ -968,54 +968,54 @@ derived key of any length. The context string should be hardcoded, globally
 unique, and application-specific. A good default format for context strings is
 \texttt{"[application] [commit timestamp] [purpose]"}, e.g.,
 \texttt{"example.com 2019-12-25 16:18:03 session tokens v1"}. 
-\texttt{"example.com 2019-12-25 16:18:03 session tokens v1"}. This mode should
-not be used with a variable context string, unless that variable is itself a
-context parameter from a higher level API with the same documented security
-requirement.
 
-The purpose of this strict requirement is to ensure that there is no way for an
-attacker in any scenario to cause two different applications or components to
-inadvertently use the same context string. There should be no dependency
-whatsoever between user input and a context string used with \flag{derive_key}.
+This mode should not be used with a dynamic context string. The context string
+should not contain variable data, like salts, IDs, or the current time. (If
+needed, those can be part of the key material, or mixed with the derived key
+afterwards.) Higher-level abstractions that wrap \flag{derive_key} should
+either hardcode their own context string, or impose the same requirement on
+their caller. The purpose of this requirement is to ensure that there is no way
+for an attacker in any scenario to cause two different applications or
+components to inadvertently use the same context string. The safest way to
+guarantee this is to prevent the context string from including input of any
+kind.
 
 Given this requirement, we then make an explicit exception to an otherwise
 universal rule of practical cryptography: Applications may use
 \flag{derive_key} with key material that is already in use with other
 algorithms. This includes other hash functions, ciphers, and abstractions like
-HMAC and HKDF. The only limitation in practice is algorithms that forbid key
-reuse entirely, like a one-time pad. (For other theoretical limitations, see
-\S\ref{sec:reusedkeys}.)
+HMAC and HKDF. This also includes the \flag{hash} and \flag{keyed_hash} modes,
+which are domain-separated from \flag{derive_key}. The only limitation in
+practice is algorithms that forbid key reuse entirely, like a one-time pad.
+(For other theoretical limitations, see \S\ref{sec:reusedkeys}.)
 
-In general, using the same key with multiple algorithms is not
-recommended. Some algorithms are built from the same core components,
-and it can be difficult to know when two algorithms might have related
-output, or when one algorithm might publish a value that another
-algorithm considers secret. 
-One especially relevant example of this problem is HMAC and HKDF
-themselves. 
-Although these algorithms have entirely different purposes, HKDF is
-defined in terms of HMAC.
-In fact, in the ``expand only'' mode of HKDF, its output is equivalent to a
-single call to HMAC. If an application used the same key with HMAC and with
-HKDF, and an HMAC input happened to collide with an HKDF context string, this
-interaction could ruin the application's security.
+In general, using the same key with multiple algorithms is not recommended.
+Some algorithms are built from the same core components, and it can be
+difficult to know when two algorithms might have related output, or when one
+algorithm might publish a value that another algorithm considers secret. One
+especially relevant example of this problem is HMAC and HKDF themselves.
+Although these algorithms have entirely different purposes, HKDF is defined in
+terms of HMAC. In fact, in the ``expand only'' mode of HKDF, its output is
+equivalent to a single call to HMAC. If an application used the same key with
+HMAC and with HKDF, and an HMAC input happened to collide with an HKDF context
+string, this interaction could ruin the application's security.
 
 The standard advice for such an application is to use its original key only
 with a key derivation function, and to derive independent subkeys for other
 algorithms. This is good and practical advice in many cases. But it may not be
 practical when an application or a protocol evolves over time. If a key was
-originally used only with HMAC, and perhaps years later a second use case
-arises, the developers may have painted themselves into a corner. Backwards
-compatibility might prevent them from using a derived subkey with HMAC. In
-cases like this, the standard advice amounts to either building a time machine,
-or over-engineering applications and protocols to derive subkeys at every step,
-in anticipation of unknown future use cases.
+originally used only with HMAC, for example, and perhaps years later a second
+use case arises, the developers may have painted themselves into a corner.
+Backwards compatibility might prevent them from using a derived subkey with
+HMAC. In cases like this, the standard advice amounts to either building a time
+machine, or over-engineering applications and protocols to derive subkeys at
+every step, in anticipation of unknown future use cases.
 
 This is why it is valuable for \flag{derive_key} to make an exception to the
 rule against mixing algorithms. It makes key derivation a practical option not
 only for new designs, but also for existing applications that are adding new
 features. In exchange, it is the responsibility of each caller to provide (or
-for abstractions, to require) a hardcoded, globally unique,
+for higher-level abstractions, to require) a hardcoded, globally unique,
 application-specific context string, which can never be made to collide with
 any other.
 
