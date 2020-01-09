@@ -191,25 +191,25 @@ biggest changes from BLAKE2 to BLAKE3 are:
         parallelizable and seekable, like BLAKE2X but unlike SHA\=/3 or HKDF.
 \end{itemize}
 
-BLAKE3 splits its input into 1~KiB chunks arranged as the leaves of a
-binary tree, thereby increasing the parallelism degree as input size
-grows~\cite{DBLP:journals/tosc/AtighehchiB17,DBLP:journals/tc/AtighehchiR17}.
-This makes BLAKE3 very fast on modern processors, thanks to their
-multi-core and SIMD instructions.
-Another benefit of hashing chunks in parallel is that the implementation
-can use SIMD vectors of any width, regardless of the word size of the
-compression function. That leaves us free to select a compression
-function that is efficient on smaller architectures, without sacrificing
-peak throughput on x86\=/64. Thus our choice of BLAKE2s instead of
-BLAKE2b for the compression function.
+BLAKE3 splits its input into 1~KiB chunks and arranges them as the leaves of a
+binary tree. Each chunk is compressed independently, so the degree of
+parallelism is equal to the number of
+chunks~\cite{DBLP:journals/tosc/AtighehchiB17,DBLP:journals/tc/AtighehchiR17}.
+This makes BLAKE3 very fast on modern processors, where it can take advantage
+of SIMD instructions and multiple cores. Another benefit of compressing chunks
+in parallel is that the implementation can use SIMD vectors of any width,
+regardless of the word size of the compression function (see
+\S\ref{sec:wordsize}). That leaves us free to select a compression function
+that is efficient on smaller architectures, without sacrificing peak throughput
+on x86\=/64. Thus our choice of BLAKE2s instead of BLAKE2b.
 
-BLAKE3's compression function is indeed similar to that of BLAKE2s. BLAKE3 has
-the same 128-bit security level and 256-bit default output size. The internal
-mixing logic is the same, with a simplified message schedule derived from a
-single repeated permutation. Based on existing cryptanalysis of BLAKE and
-BLAKE2, BLAKE3 reduces the number of rounds in the compression function from 10
-to 7 (see~\cite{TMC} for a detailed rationale). BLAKE3 also changes the setup
-and finalization steps of the compression function to support the internal tree
+BLAKE3 has the same 128-bit security level and 256-bit default output size as
+BLAKE2s. The internal mixing logic of the compression function is also the
+same, with a simplified message schedule derived from a single repeated
+permutation. Based on existing cryptanalysis of BLAKE and BLAKE2, BLAKE3
+reduces the number of rounds in the compression function from 10 to 7
+(see~\cite{TMC} for a detailed rationale). BLAKE3 also changes the setup and
+finalization steps of the compression function to support the internal tree
 structure, more efficient keying, and extendable output.
 
 \section{Specification}\label{sec:specification}
