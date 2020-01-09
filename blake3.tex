@@ -955,7 +955,7 @@ is applicable to inputs of any length, particularly short inputs where the
 second approach does not apply. The state $v_0 \ldots v_{15}$ is arranged into
 four 128-bit vectors. The first vector contains the state words $v_0 \ldots
 v_3$, the second vector contains the state words $v_4 \ldots v_7$, and so on.
-Implementing the G function (Appendix~\ref{sec:roundfn}) with vector
+Implementing the G function (see \S\ref{sec:compression}) with vector
 instructions thus mixes all four columns of the state matrix in parallel. A
 diagonalization step then rotates the words within each row so that each
 diagonal now lies along a column, and the vectorized G function is repeated to
