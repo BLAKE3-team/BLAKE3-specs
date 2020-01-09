@@ -352,16 +352,16 @@ BLAKE3 defines three domain-separated modes: \flag{hash(input)},
 These are intended to be user-facing APIs in an implementation. The \flag{hash}
 mode takes an input of any byte length $0 \leq \ell < 2^{64}$. The
 \flag{keyed_hash} mode takes an input of any length together with a 256-bit
-key. And the \flag{derive_key} mode takes a context string and key material,
-both of any length, and returns a derived key. As described in
-\S\ref{sec:extendable}, all three modes can return output of any length. The
-intended usage of \flag{derive_key} is given in \S\ref{sec:kdf}.
+key. The \flag{derive_key} mode takes a context string and key material, both
+of any length. As described in \S\ref{sec:extendable}, all three modes can
+produce output of any length. The intended usage of \flag{derive_key} is given
+in \S\ref{sec:kdf}.
 
 The modes differ from each other in their key words $k_{0} \ldots k_{7}$ and in
 the additional flags they set for every call to the compression function. In
 the \flag{hash} mode, $k_0 \ldots k_7$ are the constants $\IV_0 \ldots \IV_7$,
 and no additional flags are set. In the \flag{keyed_hash} mode, $k_0 \ldots
-k_7$ are parsed in little-endian order from the 32-byte key given by the
+k_7$ are parsed in little-endian order from the 256-bit key given by the
 caller, and the \flag{KEYED_HASH} flag is set for every compression.
 
 The third mode, \flag{derive_key}, has two stages. First the context string is
@@ -964,7 +964,7 @@ compressions.
 \subsection{Key Derivation}\label{sec:kdf}
 
 BLAKE3 provides a key derivation mode, \flag{derive_key}. This mode accepts a
-context string of any length and key material of any length, and it returns a
+context string of any length and key material of any length, and it produces a
 derived key of any length. The context string should be hardcoded, globally
 unique, and application-specific. A good default format for context strings is
 \texttt{"[application] [commit timestamp] [purpose]"}, e.g.,
