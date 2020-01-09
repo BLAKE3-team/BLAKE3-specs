@@ -452,6 +452,34 @@ in advance.
 
 \section{Performance}\label{sec:performance}
 
+\begin{figure}[h]
+\centering
+\input{./img/avx512.tikz}
+\caption{Throughput for single-threaded BLAKE3 and other hash functions on an
+    AWS c5.metal instance, measured in cycles per byte. This is an Intel
+    Cascade Lake-SP processor with AVX-512 support. Lower is faster.}%
+\label{fig:avx512}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+%\input{./benchmarks/results/rpizero.pgf}
+\input{./img/rpizero.tikz}
+\caption{Throughput for single-threaded BLAKE3 and other hash functions on a
+    Rasperry Pi Zero, measured in cycles per byte. This is a 32-bit ARM1176
+    processor. Lower is faster.}%
+\label{fig:rpizero}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\input{./img/threads.tikz}
+    \caption{Throughput for multi-threaded BLAKE3 on the same c5.metal instance
+    as in Figure~\ref{fig:avx512}, measured in GiB/s, varying the number of
+    threads. This machine has 48 physical cores. Higher is faster.}%
+\label{fig:threads}
+\end{figure}
+
 Several factors contribute to the performance of BLAKE3, depending on the
 platform and the size of the input:
 
@@ -474,31 +502,23 @@ platform and the size of the input:
         Figures~\ref{fig:avx512} and~\ref{fig:rpizero}.
 \end{itemize}
 
-\begin{figure}[h]
-\centering
-\input{./img/avx512.tikz}
-\caption{Throughput for single-threaded BLAKE3 and other hash functions on an
-    AWS c5.metal instance, measured in cycles per byte. This is an Intel
-    Cascade Lake-SP processor with AVX-512 support. Lower is faster.}%
-\label{fig:avx512}
-\end{figure}
-
 Figure~\ref{fig:avx512} shows the throughput of single-threaded BLAKE3 on
 modern server hardware. This benchmark ran on an AWS c5.metal instance with a
 pair of Intel Cascade Lake-SP 8275CL processors, which support AVX-512 vector
 instructions.
 
-The BLAKE3 curve passes through several different regimes in this figure. For a
-single chunk of input, up to 1~KiB, BLAKE3 closely mirrors BLAKE2s (as it does
-throughout all of Figure~\ref{fig:rpizero}). This is because their compression
-functions are very similar, apart from the number of rounds. Between 1 and
-4~KiB, the gap between BLAKE3 and BLAKE2s closes slightly. This is because
-BLAKE3 begins dividing its input into multiple chunks with parent nodes, and
-compressing the parent nodes adds overhead. At 4~KiB, BLAKE3 begins compressing
-multiple chunks in parallel. Parallel chunk compression can use 128-bit SSE
-vectors at 4~KiB, 256-bit AVX2 vectors at 8~KiB, and 512-bit AVX-512 vectors at
-16~KiB. Beyond 16~KiB, throughput is relatively stable, until memory bandwidth
-effects appear for very long inputs.
+The BLAKE3 curve passes through several different regimes in
+Figure~\ref{fig:avx512}. For a single chunk of input, up to 1~KiB, BLAKE3
+closely mirrors BLAKE2s (as it does throughout all of
+Figure~\ref{fig:rpizero}). This is because their compression functions are very
+similar, apart from the number of rounds. Between 1 and 4~KiB, the gap between
+BLAKE3 and BLAKE2s closes slightly. This is because BLAKE3 begins dividing its
+input into multiple chunks with parent nodes, and compressing the parent nodes
+adds overhead. At 4~KiB, BLAKE3 begins compressing multiple chunks in parallel.
+Parallel chunk compression can use 128-bit SSE vectors at 4~KiB, 256-bit AVX2
+vectors at 8~KiB, and 512-bit AVX-512 vectors at 16~KiB. Beyond 16~KiB,
+throughput is relatively stable, until memory bandwidth effects appear for very
+long inputs.
 
 On this platform, the biggest performance difference between algorithms is how
 much they can benefit from SIMD. Only BLAKE3 and KangarooTwelve are able to
@@ -509,16 +529,6 @@ parallel. BLAKE3 and KangarooTwelve are very close in peak throughput, but
 KangarooTwelve needs more input to reach its peak, in part because of its
 larger 8~KiB chunk size.
 
-\begin{figure}[h]
-\centering
-%\input{./benchmarks/results/rpizero.pgf}
-\input{./img/rpizero.tikz}
-\caption{Throughput for single-threaded BLAKE3 and other hash functions on a
-    Rasperry Pi Zero, measured in cycles per byte. This is a 32-bit ARM1176
-    processor. Lower is faster.}%
-\label{fig:rpizero}
-\end{figure}
-
 Figure~\ref{fig:rpizero} shows the throughput of single-threaded BLAKE3 on a
 smaller embedded platform. This benchmark ran on a Raspberry Pi Zero with a
 32-bit ARM1176 processor. Here, the biggest difference between algorithms is
@@ -526,15 +536,6 @@ whether they use 32-bit or 64-bit words. As noted above, BLAKE3 and BLAKE2s
 have similar performance profiles here, because their compression functions are
 closely related, and because there is no multi-core or SIMD parallelism for
 BLAKE3 to exploit.
-
-\begin{figure}[h]
-\centering
-\input{./img/threads.tikz}
-    \caption{Throughput for multi-threaded BLAKE3 on the same c5.metal instance
-    as in Figure~\ref{fig:avx512}, measured in GiB/s, varying the number of
-    threads. This machine has 48 physical cores. Higher is faster.}%
-\label{fig:threads}
-\end{figure}
 
 Figure~\ref{fig:threads} shows the throughput of multi-threaded BLAKE3. This
 benchmark ran on the same c5.metal instance as in Figure~\ref{fig:avx512},
