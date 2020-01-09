@@ -622,7 +622,7 @@ the exception that:
 \begin{itemize}
   \item BLAKE2's $f_0$ and $f_1$ ``flags'' are replaced by the $b$ and $d$ inputs, which
   encode the functional context of the compression function instance.
-  \item Finalization returns $16$ words instead of $8$, and only applies the feed-forward only on the second half of the output.
+  \item Finalization returns $16$ words instead of $8$, and only applies the feed-forward on the second half of the output.
 \end{itemize}
 
 The latter change causes the BLAKE3 function to no longer be indifferentiable, unlike its predecessor~\cite{DBLP:journals/tosc/LuykxMN16}. Indeed, an attacker with oracle access to $C(\dots)$ and $E(\dots)$ that obtains $y = C(x, m, b, d)$ can compute $(x, b, d) = E^{-1}(m, (y_l, y_h) \oplus (y_h, 0) \oplus (0, x_l))$; a simulator with access to a random oracle can not perform the same inversion, and as such this scheme---much like Davies-Meyer---is not indifferentiable from a random oracle. This causes some surmountable complications in the next section.
@@ -1274,7 +1274,7 @@ tree.
 
 \subsection{Keyed Permutation Key Schedule}\label{sec:keysched}
 
-One of the main historical pain points of implementing BLAKE and BLAKE2 has been the distinct message permutation at each round. This had several effects, including forcing the complete unrolling of the keyed permutation to maximize speed, complicated and error-prone implementation of the permutations in the SIMD case, and complications in the analysis (e.g., some attacks do not start at round 0 because the permutation is most attack-friendly at some later point.)
+One of the main historical pain points of implementing BLAKE and BLAKE2 has been the distinct message permutation at each round. This had several effects, including forcing the complete unrolling of the keyed permutation to maximize speed, complicated and error-prone implementation of the permutations in the SIMD case, and complications in the analysis. (E.g., some attacks do not start at round 0 because the permutation is most attack-friendly at some later point.)
 
 To this end, we decided to replace the 10 distinct permutations by a single one, which is applied to the message after each round. The criteria for selecting the permutation were similar to the ones used for BLAKE\footnote{One of the requirements, regarding constants, was discarded since it does not apply to BLAKE3.}:
 \begin{itemize}
@@ -1313,7 +1313,7 @@ For 8 rounds, there are exactly 12 permutations that satisfy these requirements,
 9 & 5 & 0 & 2 & 11 & 8 & 14 & 12 & 13 & 15 & 3 & 10 & 1 & 6 & 7 & 4\\ \bottomrule
 \end{tabular}
 \end{table}
-Of these, one of them clearly stood out as having the lowest differential probability trail for the keyed permutation after 3 rounds---$2^{-21}$ compared to $2^{-13}$ for the next best permutations, and thus was the one adopted.
+Of these, one of them clearly stood out as having the lowest differential probability trail for the keyed permutation after 3 rounds---$2^{-21}$ compared to $2^{-13}$ for the next best permutations---and thus was the one adopted.
 
 % As can be deduced from Table~\ref{tab:trails}, the security of the keyed permutation (with respect to differential cryptanalysis) for the new single-permutation schedule appears to be slightly improved in comparison to the one from BLAKE and BLAKE2. 
 
