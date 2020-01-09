@@ -1028,17 +1028,20 @@ that one component can cause by accidentally leaking its key.
 
 \subsection{Stateful Hash Object}\label{sec:sho}
 
-To abstract away various uses of the hash function in the Noise protocol framework, the notion of \emph{stateful hash objects} (SHO)~\cite{Perrin19} has been suggested. An SHO is an interface with 3 methods:
+To abstract away various uses of the hash function in the Noise protocol framework, the notion of \emph{stateful hash objects} (SHO)~\cite{Perrin19} has been suggested. An SHO is an interface with 4 methods:
 \begin{itemize}
   \item \texttt{init(label)}: Initializes the internal state using a custom domain-separation label.
   \item \texttt{absorb(data)}: Hashes an arbitrary number of bytes into the state.
-  \item \texttt{squeeze(length)}: Produces an arbitrary amount of pseudorandom output based on the current state.
+  \item \texttt{ratchet()}: Updates the state to be a one-way cryptographic function of all preceding inputs, with empty buffers.
+  \item \texttt{squeeze(length)}: Produces an arbitrary amount of pseudorandom output based on the current state. The SHO is not used again after this.
 \end{itemize}
-Due to its zero-overhead keying and variable-length output, it is straightforward to adapt BLAKE3 into an SHO. The internal state at the time $t$ is represented by a $256$-bit key $k_t$:
+Due to its zero-overhead keying and variable-length output, it is straightforward to adapt BLAKE3 into an SHO. The internal state is an incremental implementation of \flag{keyed_hash}:
 \begin{itemize}
-  \item The initial key, $k_0$, is obtained as $k_0 = \text{\flag{hash}}(label)$;
-  \item \texttt{absorb(data)} updates the key: $k_{i+1} = \text{\flag{keyed_hash}}(k_i, data)$;
-  \item \texttt{squeeze(length)} extends the output of the previous call to \flag{hash} or \flag{keyed_hash}.\footnote{Extending the output of the last absorb entails preserving the last up to $64$ bytes of input data in memory for possibly a long time; in such cases it might be desirable to call \texttt{absorb(empty)} after each absorb call.}.
+    \item The label key is obtained as \flag{hash(label)};
+  \item The incremental hasher is initialized with the label key;
+  \item \texttt{absorb(data)} updates the incremental hasher as usual;
+  \item \texttt{ratchet()} finalizes the incremental hasher, extracts the first 32 bytes of output, and then re-initializes the hasher with those 32 bytes as the key;
+  \item \texttt{squeeze(length)} finalizes the incremental hasher, skips the first 64 bytes of output, and then extracts \texttt{length} bytes. We only need to skip 32 bytes to conceal the \texttt{ratchet} key, but skipping a full 64-byte output block is more efficient.
 \end{itemize}
 
 \subsection{Verified Streaming}\label{sec:verifiedstreaming}
