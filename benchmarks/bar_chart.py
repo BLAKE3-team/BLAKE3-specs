@@ -7,13 +7,27 @@ import seaborn
 
 THIS_FILE = Path(__file__)
 
-# Measurements were taken with a 16 KiB input on the c5.metal machine, with all
-# cores disabled but one, and TurboBoost left on (3.9 GHz). Best of 3 runs.
-# BLAKE2b and BLAKE2s (but not BLAKE3) were built with RUSTFLAGS="-C
-# target-cpu=native", to get AVX-512 rotations. Other parallel algorithms
-# (BLAKE2bp, BLAKE2sp, KangarooTwelve) are omitted here, both because they are
-# uncommon, and because the 16 KiB length is cherry-picked for BLAKE3 and would
-# be unfair to them.
+# Benchmark measurements were taken from `cargo bench` run in this directory
+# and hardcoded here. They machine used was an AWS c5.metal instance, with an
+# Intel Cascade Lake-SP 8275CL processor, running Arch Linux. MD5, SHA-1,
+# SHA-2, and SHA-3 are all provided by OpenSSL. BLAKE2b and BLAKE2s are
+# provided by the `blake2b_simd` and `blake2s_simd` crates. BLAKE3 is provided
+# by the `blake3` crate.
+#
+# The benchmark suite includes a large set of different input lengths (the
+# entire data set for Figure 3 in the BLAKE3 paper), which takes a long time to
+# run. To run just the 16 KiB benchmarks shown in this chart, set the env var
+# `BLAKE3_BENCH_16KIB=1`.
+#
+# Note that while the benchmark machine supports AVX-512, the `blake2b_simd`
+# and `blake2s_simd` crates do not currently include explicit AVX-512
+# rotations. To get the compiler to include those rotations, I set the env var
+# `RUSTFLAGS="-C target-cpu=native"`, for the BLAKE2 benchmarks only.
+#
+# Although the benchmark suite includes other parallel algorithms (BLAKE2bp,
+# BLAKE2sp, KangarooTwelve), their figures are omitted here. That's both
+# because they are uncommon -- for example, not supported in OpenSSL -- and
+# also because the 16 KiB input length used here would be unfair to them.
 
 BARS = [
     ("BLAKE3", 6164),

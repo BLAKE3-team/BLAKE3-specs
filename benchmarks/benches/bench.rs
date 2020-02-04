@@ -20,6 +20,11 @@ fn benchmarks(c: &mut Criterion) {
     }
     params.push(MAX_LEN);
 
+    if std::env::var_os("BLAKE3_BENCH_16KIB").is_some() {
+        params.clear();
+        params.push(16384);
+    }
+
     let b = ParameterizedBenchmark::new(
         "blake3",
         |b, param| {
