@@ -285,7 +285,7 @@ The $\IV_{0} \ldots \IV_{7}$ constants are the same as in
 BLAKE2s, and they are reproduced in Table~\ref{tab:constants}.
 
 \begin{table}
-  \caption{Constants $\IV_0,\dots,\IV_7$ used in the initialization of BLAKE3.}%
+  \caption{Constants $\IV_0\dots\IV_7$ used in the initialization of BLAKE3.}%
   \label{tab:constants}
   \centering
   \begin{tabular}{cc}
@@ -437,7 +437,7 @@ bytes.
 
 Each block is parsed in little-endian order into message words $m_{0}
 \ldots m_{15}$ and compressed. The input chaining value $h_{0} \ldots h_{7}$
-for the first block of each chunk is comprised of the key words $k_{0} \ldots k_{7}$. The
+for the first block of each chunk is composed of the key words $k_{0} \ldots k_{7}$. The
 input chaining value for subsequent blocks in each chunk is the output of the truncated
 compression function for the previous block. 
 
@@ -638,7 +638,7 @@ multi-target attacks.
 
 \subsection{Compression Function}\label{sec:compressindiff}
 
-The BLAKE3 compression function is, at a high-level, identical to that of BLAKE2s, with
+The BLAKE3 compression function is, at a high level, identical to that of BLAKE2s, with
 the exception that:
 
 \begin{itemize}
@@ -1250,7 +1250,7 @@ lets the implementation use AVX2 vector instructions on modern x86 processors.
 But if we increased the chunk size to 2 KiB, the same input would only occupy 4
 SIMD lanes, and the high throughput of AVX2 would be left on the table.
 
-Thus we want to pick the smallest chunks size we can to maximize medium-length
+Thus we want to pick the smallest chunk size we can to maximize medium-length
 parallelism, without incurring ``excessive'' overhead from parent nodes. The
 point of comparison here is the peak throughput for a very large chunk size,
 like 64~KiB, where parent node overhead becomes small enough to be negligible.
@@ -1273,13 +1273,13 @@ the size of the input.
 It is common advice that SHA\=/512 (because it uses 64-bit words) is faster on
 64-bit platforms than SHA\=/256 (because it uses 32-bit words). A similar
 effect applies to BLAKE2b and BLAKE2s. However, this effect does not apply to
-algorithms that incorporate more SIMD parallelism. BLAKE2sp has higher peak
+algorithms that incorporate more SIMD parallelism. BLAKE2sp has a higher peak
 throughput than BLAKE2bp on x86-64. This is because the SIMD instructions that
 operate on 8 lanes of 32-bit words have the same throughput as those that
 operate on 4 lanes of 64-bit words. The key factor for exploiting SIMD
 performance is not word size but vector size, and both of those cases occupy a
 256-bit vector. (The remaining effect making BLAKE2sp faster is that its
-smaller state requires fewer rounds of compression.)
+smaller states require fewer rounds of compression.)
 
 For that reason, peak throughput on x86-64 is largely independent of the word
 size. The performance differences that remain are restricted to shorter input
@@ -1290,7 +1290,7 @@ short input performance is often dominated by other sources of overhead in
 typical applications.
 
 Instead, the decisive advantage of 32-bit words over 64-bit words is
-performance on smaller architectures and embedded systems. BLAKE3 is designed
+performance on smaller architectures and embedded systems. BLAKE3 is designed to
 be a single general-purpose hash function, suitable for users of both BLAKE2b
 and BLAKE2s. On 32-bit platforms like the ARM1176, where BLAKE2s does
 especially well, a 64-bit hash function could be a performance regression.
@@ -1322,13 +1322,13 @@ entirely.
 
 \subsection{Keyed Permutation Key Schedule}\label{sec:keysched}
 
-One of the main historical pain points of implementing BLAKE and BLAKE2 has been the distinct message permutation at each round. This had several effects, including forcing the complete unrolling of the keyed permutation to maximize speed, complicated and error-prone implementation of the permutations in the SIMD case, and complications in the analysis. (E.g., some attacks do not start at round 0 because the permutation is most attack-friendly at some later point.)
+One of the main historical pain points of implementing BLAKE and BLAKE2 has been the distinct message permutation at each round. This has several effects, including forcing the complete unrolling of the keyed permutation to maximize speed, complicated and error-prone implementation of the permutations in the SIMD case, and complications in the analysis. (E.g., some attacks do not start at round 0 because the permutation is most attack-friendly at some later point.)
 
-To this end, we decided to replace the 10 distinct permutations by a single one, which is applied to the message after each round. The criteria for selecting the permutation were similar to the ones used for BLAKE\footnote{One of the requirements, regarding constants, was discarded since it does not apply to BLAKE3.}:
+To this end, we decided to replace the 10 distinct permutations with a single one, which is applied to the message after each round. The criteria for selecting the permutation were similar to the ones used for BLAKE\footnote{One of the requirements, regarding constants, was discarded since it does not apply to BLAKE3.}:
 \begin{itemize}
   \item For 8 rounds, no message word should be input twice at the same point;
-  \item For 8 rounds, each message should appear exactly 4 times in a column step and 4 times in a diagonal step;
-  \item For 8 rounds, each message word should appear exactly 4 times in the first position in G and 4 times in the second one.
+  \item For 8 rounds, each message word should appear exactly 4 times in a column step and 4 times in a diagonal step;
+  \item For 8 rounds, each message word should appear exactly 4 times in the first position in G and 4 times in the second.
 \end{itemize}
 For 8 rounds, there are exactly 12 permutations that satisfy these requirements, cf. Table~\ref{tab:candidates}.
 \begin{table}
@@ -1383,7 +1383,7 @@ zeros. The majority of this application's input chunks could be the all-zero
 chunk. This application might try to compute the CV of the zero chunk only
 once, and then check each chunk before compressing it to see whether it can use
 that precomputed CV. This check is cheap, and for this application it could be
-a big speedup. But this check is also dangerous, because it is not
+a big speedup. But this optimization is dangerous, because it is not
 constant-time. The runtime of the hash function would leak information about
 its input.
 
