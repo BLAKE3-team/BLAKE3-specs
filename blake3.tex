@@ -437,7 +437,7 @@ bytes.
 
 Each block is parsed in little-endian order into message words $m_{0}
 \ldots m_{15}$ and compressed. The input chaining value $h_{0} \ldots h_{7}$
-for the first block of each chunk is comprised of the key words $k_{0} \ldots k_{7}$. The
+for the first block of each chunk is composed of the key words $k_{0} \ldots k_{7}$. The
 input chaining value for subsequent blocks in each chunk is the output of the truncated
 compression function for the previous block. 
 
@@ -1276,7 +1276,7 @@ short input performance is often dominated by other sources of overhead in
 typical applications.
 
 Instead, the decisive advantage of 32-bit words over 64-bit words is
-performance on smaller architectures and embedded systems. BLAKE3 is designed
+performance on smaller architectures and embedded systems. BLAKE3 is designed to
 be a single general-purpose hash function, suitable for users of both BLAKE2b
 and BLAKE2s. On 32-bit platforms like the ARM1176, where BLAKE2s does
 especially well, a 64-bit hash function could be a performance regression.
