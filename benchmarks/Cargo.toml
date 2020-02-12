@@ -8,7 +8,7 @@ name = "bench"
 harness = false
 
 [dependencies]
-blake3 = { version = "0.1", features = ["c_avx512"] }
+blake3 = { version = "0.2", features = ["c"] }
 # The uninline_portable feature improves BLAKE2b performance on the RPiZero.
 # That makes BLAKE2b performance on that platform in these benchmarks better
 # than what you get from e.g. OpenSSL BLAKE2b, though still worse than BLAKE2s.

@@ -7,6 +7,12 @@ const MAX_LEN: usize = 1 << 30;
 criterion_group!(cg, benchmarks);
 criterion_main!(cg);
 
+fn hash_rayon(input: &[u8]) -> blake3::Hash {
+    blake3::Hasher::new()
+        .update_with_join::<blake3::join::RayonJoin>(input)
+        .finalize()
+}
+
 fn benchmarks(c: &mut Criterion) {
     let mut params = Vec::new();
     let mut len = MIN_LEN;
@@ -25,7 +31,7 @@ fn benchmarks(c: &mut Criterion) {
                 .build()
                 .unwrap();
             pool.install(|| {
-                b.iter(|| blake3::hash(input.get()));
+                b.iter(|| hash_rayon(input.get()));
             });
         },
         params,
@@ -38,7 +44,7 @@ fn benchmarks(c: &mut Criterion) {
                 .build()
                 .unwrap();
             pool.install(|| {
-                b.iter(|| blake3::hash(input.get()));
+                b.iter(|| hash_rayon(input.get()));
             });
         })
         .with_function("threads_04", |b, param| {
@@ -48,7 +54,7 @@ fn benchmarks(c: &mut Criterion) {
                 .build()
                 .unwrap();
             pool.install(|| {
-                b.iter(|| blake3::hash(input.get()));
+                b.iter(|| hash_rayon(input.get()));
             });
         })
         .with_function("threads_08", |b, param| {
@@ -58,7 +64,7 @@ fn benchmarks(c: &mut Criterion) {
                 .build()
                 .unwrap();
             pool.install(|| {
-                b.iter(|| blake3::hash(input.get()));
+                b.iter(|| hash_rayon(input.get()));
             });
         })
         .with_function("threads_16", |b, param| {
@@ -68,7 +74,7 @@ fn benchmarks(c: &mut Criterion) {
                 .build()
                 .unwrap();
             pool.install(|| {
-                b.iter(|| blake3::hash(input.get()));
+                b.iter(|| hash_rayon(input.get()));
             });
         })
         .with_function("threads_32", |b, param| {
@@ -78,7 +84,7 @@ fn benchmarks(c: &mut Criterion) {
                 .build()
                 .unwrap();
             pool.install(|| {
-                b.iter(|| blake3::hash(input.get()));
+                b.iter(|| hash_rayon(input.get()));
             });
         })
         // 48 is the number of physical cores on the AWS c5.metal instance
@@ -90,7 +96,7 @@ fn benchmarks(c: &mut Criterion) {
                 .build()
                 .unwrap();
             pool.install(|| {
-                b.iter(|| blake3::hash(input.get()));
+                b.iter(|| hash_rayon(input.get()));
             });
         })
         .throughput(|len| Throughput::Bytes(*len as u64));

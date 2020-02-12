@@ -8,7 +8,7 @@ name = "bench"
 harness = false
 
 [dependencies]
-blake3 = { version = "0.1", features = ["c_avx512"] }
+blake3 = { version = "0.2", features = ["c", "rayon"] }
 criterion = "0.3.0"
 page_size = "0.4.1"
 rand = { version = "0.7.2", features = ["small_rng"] }
