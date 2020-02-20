@@ -30,7 +30,7 @@ THIS_FILE = Path(__file__)
 # also because the 16 KiB input length used here would be unfair to them.
 
 BARS = [
-    ("BLAKE3", 6164),
+    ("BLAKE3", 6866),
     ("BLAKE2b", 1312),
     ("SHA-1", 1027),
     ("BLAKE2s", 876),
@@ -76,7 +76,7 @@ def main():
     plot.set_title("Performance on AWS c5.metal, 16 KiB input, 1 thread")
     plot.set(xlabel="Speed (MiB/s)")
     plot.set(ylabel=None)
-    pyplot.xlim(0, 7000)
+    pyplot.xlim(0, 8000)
     # pyplot.savefig(THIS_FILE.with_suffix(".svg"), bbox_inches="tight")
     # pyplot.savefig(THIS_FILE.with_suffix(".png"), bbox_inches="tight")
     pyplot.show()
