@@ -542,7 +542,7 @@ platform and the size of the input:
 
 \begin{itemize}
     \item The implementation can compress groups of chunks in parallel using
-        SIMD (cf.~\S\ref{sec:simd}). This is visible at 4~KiB and above in
+        SIMD (cf.~\S\ref{sec:simd}). This is visible at 2~KiB and above in
         Figure~\ref{fig:avx512}.
     \item The implementation can use multiple threads
         (cf.~\S\ref{sec:multithreading}). This is the subject of
@@ -568,12 +568,13 @@ The BLAKE3 curve passes through several different regimes in
 Figure~\ref{fig:avx512}. For a single chunk of input, up to 1~KiB, BLAKE3
 closely mirrors BLAKE2s (as it does throughout all of
 Figure~\ref{fig:rpizero}). This is because their compression functions are very
-similar, apart from the number of rounds. Between 1 and 4~KiB, the gap between
-BLAKE3 and BLAKE2s closes slightly. This is because BLAKE3 begins dividing its
-input into multiple chunks with parent nodes, and compressing the parent nodes
-adds overhead. At 4~KiB, BLAKE3 begins compressing multiple chunks in parallel.
-Parallel chunk compression can use 128-bit SSE vectors at 4~KiB, 256-bit AVX2
-vectors at 8~KiB, and 512-bit AVX-512 vectors at 16~KiB. Beyond 16~KiB,
+similar, apart from the number of rounds. Between 1 and 2~KiB, the gap between
+BLAKE3 and BLAKE2s closes slightly. This is because BLAKE3 divides the input
+into two chunks with a parent node, and compressing the parent node adds
+overhead. At 2~KiB, BLAKE3 begins compressing multiple chunks in parallel. This
+implementation uses 2-way row-based parallelism at 2~KiB, 4-way row-based
+parallelism at 4~KiB, 8-way word-based parallelism at 8~KiB, and 16-way
+word-based parallelism at 16~KiB (see \S\ref{sec:simd}). Beyond 16~KiB,
 throughput is relatively stable, until memory bandwidth effects appear for very
 long inputs.
 
@@ -582,7 +583,7 @@ much they can benefit from SIMD. Only BLAKE3 and KangarooTwelve are able to
 take full advantage of AVX-512. The fixed-interleaved tree structures of
 BLAKE2bp and BLAKE2sp limit those algorithms to 256-bit vectors. Other hash
 functions are much slower, because they cannot compress multiple blocks in
-parallel. BLAKE3 and KangarooTwelve are very close in peak throughput, but
+parallel. BLAKE3 and KangarooTwelve are close to each other in peak throughput, but
 KangarooTwelve needs more input to reach its peak, in part because of its
 larger 8~KiB chunk size.
 
@@ -611,7 +612,7 @@ sizes benefit from compressing less padding. The fixed-interleaved tree
 structures of BLAKE2bp and BLAKE2sp are especially costly when the input is
 short, because they always compress a parent node and a fixed number of leaves.
 The advantage of a fixed-interleaved tree structure comes at medium input
-lengths, where BLAKE3 does not yet have enough chunks to operate in parallel.
+lengths, where BLAKE3 has not yet reached a high degree of parallelism.
 This is the regime around 1--4\,KiB in Figure~\ref{fig:avx512}, where BLAKE2bp
 and BLAKE2sp pull ahead.
 
@@ -944,7 +945,7 @@ whether more input is coming.
 
 \subsection{SIMD}\label{sec:simd}
 
-There are two approaches to using SIMD in a BLAKE3 implementation, and both are
+There are two primary approaches to using SIMD in a BLAKE3 implementation, and both are
 important for high performance at different input lengths. The first approach
 is to use 128-bit vectors to represent the 4-word rows of the state matrix. The
 second approach is to use vectors of any size to represent words in multiple
@@ -980,6 +981,19 @@ pushing each of them into the CV stack one at a time. It can also be combined
 with either of the multi-threading strategies from \S\ref{sec:multithreading}.
 Rather than having each task or recursive leaf compress one chunk at a time,
 each can compress multiple chunks in parallel.
+
+A third approach is also possible, though it is less widely applicable than the
+first two. Entire 4-word rows can be stored together within a vector, as in the
+first approach, but larger vectors can be used to store multiple such rows,
+each belonging to a different state matrix. For example, 256-bit vectors can
+store two full rows, thus compressing two chunks in parallel. Diagonalization
+and undiagonalization steps are still required in this arrangement, so the
+second approach is preferable when enough input is available. However, on
+platforms like x86 that do not support 64-bit vectors, this approach is the
+only way to implement 2-way SIMD parallelism for 2-chunk inputs. The benefit of
+using wider vectors may also outweigh the cost of diagonalization, though this
+varies between different microarchitectures. The performance of this approach
+is visible at 2~KiB and 4~KiB in Figure~\ref{fig:avx512}.
 
 \subsection{Memory Requirements}\label{sec:memory}
 
