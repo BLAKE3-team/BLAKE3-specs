@@ -568,12 +568,13 @@ The BLAKE3 curve passes through several different regimes in
 Figure~\ref{fig:avx512}. For a single chunk of input, up to 1~KiB, BLAKE3
 closely mirrors BLAKE2s (as it does throughout all of
 Figure~\ref{fig:rpizero}). This is because their compression functions are very
-similar, apart from the number of rounds. Between 1 and 4~KiB, the gap between
-BLAKE3 and BLAKE2s closes slightly. This is because BLAKE3 begins dividing its
-input into multiple chunks with parent nodes, and compressing the parent nodes
-adds overhead. At 4~KiB, BLAKE3 begins compressing multiple chunks in parallel.
-Parallel chunk compression can use 128-bit SSE vectors at 4~KiB, 256-bit AVX2
-vectors at 8~KiB, and 512-bit AVX-512 vectors at 16~KiB. Beyond 16~KiB,
+similar, apart from the number of rounds. Between 1 and 2~KiB, the gap between
+BLAKE3 and BLAKE2s closes slightly. This is because BLAKE3 divides the input
+into two chunks with a parent node, and compressing the parent node adds
+overhead. At 2~KiB, BLAKE3 begins compressing multiple chunks in parallel. This
+implementation uses 2-way row-based parallelism at 2~KiB, 4-way word-based
+parallelism at 4~KiB, 8-way word-based parallelism at 8~KiB, and 16-way
+word-based parallelism at 16~KiB (see \S\ref{sec:simd}). Beyond 16~KiB,
 throughput is relatively stable, until memory bandwidth effects appear for very
 long inputs.
 
@@ -944,7 +945,7 @@ whether more input is coming.
 
 \subsection{SIMD}\label{sec:simd}
 
-There are two approaches to using SIMD in a BLAKE3 implementation, and both are
+There are two primary approaches to using SIMD in a BLAKE3 implementation, and both are
 important for high performance at different input lengths. The first approach
 is to use 128-bit vectors to represent the 4-word rows of the state matrix. The
 second approach is to use vectors of any size to represent words in multiple
@@ -980,6 +981,17 @@ pushing each of them into the CV stack one at a time. It can also be combined
 with either of the multi-threading strategies from \S\ref{sec:multithreading}.
 Rather than having each task or recursive leaf compress one chunk at a time,
 each can compress multiple chunks in parallel.
+
+A third approach is also possible, though it is less widely applicable than the
+other two described above. Entire 4-word rows can be stored together within a
+vector, as in the first approach, but larger vectors can be used to store
+multiple such rows, each belonging to a different state matrix. For example, a
+256-bit vector can store two full rows. Diagonalization and undiagonalization
+steps are still needed in this arrangement, so the second approach is
+preferable where possible. However, on platforms like x86 that do not support
+64-bit vectors, this approach is the only way to implement 2-way parallelism
+for 2-chunk inputs. The performance of this approach is visible at 2~KiB in
+Figure~\ref{fig:avx512}.
 
 \subsection{Memory Requirements}\label{sec:memory}
 
