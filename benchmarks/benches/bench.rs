@@ -1,8 +1,8 @@
 use criterion::{criterion_group, criterion_main, Criterion, ParameterizedBenchmark, Throughput};
 use rand::prelude::*;
 
-const MIN_LEN: usize = 64;
-const MAX_LEN: usize = 1 << 20;
+const MIN_LEN: usize = 1 << 20;
+const MAX_LEN: usize = 1 << 27;
 
 criterion_group!(cg, benchmarks);
 criterion_main!(cg);
@@ -34,42 +34,6 @@ fn benchmarks(c: &mut Criterion) {
         params,
     );
     let b = b
-        .with_function("blake2b", |b, param| {
-            let mut input = RandomInput::new(*param);
-            b.iter(|| blake2b_simd::blake2b(input.get()));
-        })
-        .with_function("blake2s", |b, param| {
-            let mut input = RandomInput::new(*param);
-            b.iter(|| blake2s_simd::blake2s(input.get()));
-        })
-        .with_function("blake2bp", |b, param| {
-            let mut input = RandomInput::new(*param);
-            b.iter(|| blake2b_simd::blake2bp::blake2bp(input.get()));
-        })
-        .with_function("blake2sp", |b, param| {
-            let mut input = RandomInput::new(*param);
-            b.iter(|| blake2s_simd::blake2sp::blake2sp(input.get()));
-        })
-        .with_function("md5", |b, param| {
-            let mut input = RandomInput::new(*param);
-            b.iter(|| openssl::hash::hash(openssl::hash::MessageDigest::md5(), input.get()));
-        })
-        .with_function("sha1", |b, param| {
-            let mut input = RandomInput::new(*param);
-            b.iter(|| openssl::hash::hash(openssl::hash::MessageDigest::sha1(), input.get()));
-        })
-        .with_function("sha256", |b, param| {
-            let mut input = RandomInput::new(*param);
-            b.iter(|| openssl::hash::hash(openssl::hash::MessageDigest::sha256(), input.get()));
-        })
-        .with_function("sha512", |b, param| {
-            let mut input = RandomInput::new(*param);
-            b.iter(|| openssl::hash::hash(openssl::hash::MessageDigest::sha512(), input.get()));
-        })
-        .with_function("sha3-256", |b, param| {
-            let mut input = RandomInput::new(*param);
-            b.iter(|| openssl::hash::hash(openssl::hash::MessageDigest::sha3_256(), input.get()));
-        })
         .with_function("kangarootwelve", |b, param| {
             let mut input = RandomInput::new(*param);
             b.iter(|| kangarootwelve::kangarootwelve(input.get()));
