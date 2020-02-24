@@ -10,36 +10,18 @@ import sys
 
 HASH_NAMES = [
     ("blake3", "BLAKE3"),
-    ("blake2b", "BLAKE2b"),
-    ("blake2s", "BLAKE2s"),
-    ("blake2bp", "BLAKE2bp"),
-    ("blake2sp", "BLAKE2sp"),
-    ("sha512", "OpenSSL SHA-512"),
-    ("sha256", "OpenSSL SHA-256"),
-    ("sha3-256", "OpenSSL SHA3-256"),
     ("kangarootwelve", "KangarooTwelve"),
 ]
 
 SIZES = [
-    (2**6, "64 B"),
-    (2**7, "128 B"),
-    (2**8, "256 B"),
-    (2**9, "512 B"),
-    (2**10, "1 KiB"),
-    (2**11, "2 KiB"),
-    (2**12, "4 KiB"),
-    (2**13, "8 KiB"),
-    (2**14, "16 KiB"),
-    (2**15, "32 KiB"),
-    (2**16, "64 KiB"),
-    (2**17, "128 KiB"),
-    (2**18, "256 KiB"),
-    (2**19, "512 KiB"),
     (2**20, "1 MiB"),
     (2**21, "2 MiB"),
     (2**22, "4 MiB"),
     (2**23, "8 MiB"),
     (2**24, "16 MiB"),
+    (2**25, "16 MiB"),
+    (2**26, "16 MiB"),
+    (2**27, "16 MiB"),
 ]
 
 
@@ -116,8 +98,8 @@ def main():
     # plot.set_title("Performance on XYZ")
     if freq_mhz is not None:
         plot.set(ylabel="Throughput (cpb)\n")
-        ymax = 10
-        yticks = list(range(0, ymax + 1))
+        ymax = 1
+        yticks = list(x/10 for x in range(0, 10))
         plot.set(yticks=yticks)
         pyplot.ylim(0, ymax)
     else:
