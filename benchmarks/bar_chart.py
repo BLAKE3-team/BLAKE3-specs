@@ -8,7 +8,7 @@ import seaborn
 THIS_FILE = Path(__file__)
 
 # Benchmark measurements were taken from `cargo bench` run in this directory
-# and hardcoded here. They machine used was an AWS c5.metal instance, with an
+# and hardcoded here. The machine used was an AWS c5.metal instance, with an
 # Intel Cascade Lake-SP 8275CL processor, running Arch Linux. MD5, SHA-1,
 # SHA-2, and SHA-3 are all provided by OpenSSL. BLAKE2b and BLAKE2s are
 # provided by the `blake2b_simd` and `blake2s_simd` crates. BLAKE3 is provided
