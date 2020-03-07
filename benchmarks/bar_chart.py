@@ -7,17 +7,12 @@ import seaborn
 
 THIS_FILE = Path(__file__)
 
-# Benchmark measurements were taken from `cargo bench` run in this directory
-# and hardcoded here. The machine used was an AWS c5.metal instance, with an
-# Intel Cascade Lake-SP 8275CL processor, running Arch Linux. MD5, SHA-1,
-# SHA-2, and SHA-3 are all provided by OpenSSL. BLAKE2b and BLAKE2s are
+# Benchmark measurements were taken from `cargo bench '16384$'` run in this
+# directory and hardcoded here. The machine used was an AWS c5.metal instance,
+# with an Intel Cascade Lake-SP 8275CL processor, running Arch Linux. MD5,
+# SHA-1, SHA-2, and SHA-3 are all provided by OpenSSL. BLAKE2b and BLAKE2s are
 # provided by the `blake2b_simd` and `blake2s_simd` crates. BLAKE3 is provided
 # by the `blake3` crate.
-#
-# The benchmark suite includes a large set of different input lengths (the
-# entire data set for Figure 3 in the BLAKE3 paper), which takes a long time to
-# run. To run just the 16 KiB benchmarks shown in this chart, set the env var
-# `BLAKE3_BENCH_16KIB=1`.
 #
 # Note that while the benchmark machine supports AVX-512, the `blake2b_simd`
 # and `blake2s_simd` crates do not currently include explicit AVX-512
