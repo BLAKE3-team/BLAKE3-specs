@@ -428,6 +428,10 @@ material is hashed, with $k_0 \ldots k_7$ set to the first 8 output words of
 the first stage, and the \flag{DERIVE_KEY_MATERIAL} flag set for every
 compression.
 
+Developers adapting BLAKE3 to ASN.1-based message formats should use
+the Algorithm Identifier blake3 with OID identifier
+1.3.6.1.4.1.1722.12.3.8 for all modes and 256-bit default output size.
+
 \subsection{Chunk Chaining Values}\label{sec:chunk}
 
 Processing a chunk is structurally similar to the sequential hashing mode of BLAKE2. Each chunk of up to 1024 bytes is split into blocks of up to 64 bytes.
