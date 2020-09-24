@@ -831,7 +831,7 @@ there are two entries in the stack, with $c_2$ on top because it is newer. When
 $c_3$ is added, we perform two merges, first popping off $c_2$ and then popping
 off $p_0$, and only $p_2$ remains in the stack.
 
-Note how the stack order of $c_2$ and $p_0$ above match the order in which we
+Note how the stack order of $c_2$ and $p_0$ above matches the order in which we
 need to retrieve them for merging. By ordering CVs in the stack from newest at
 the top to oldest at the bottom, we also implicitly order them from tree-right
 to tree-left, and from the smallest subtree to the largest subtree. This
