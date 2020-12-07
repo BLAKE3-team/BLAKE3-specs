@@ -14,9 +14,21 @@ and related or neighboring rights to the source code in this file.
 http://creativecommons.org/publicdomain/zero/1.0/
 */
 
-#ifndef _TestKangarooTwelve_h_
-#define _TestKangarooTwelve_h_
+#ifndef _align_h_
+#define _align_h_
 
-void testKangarooTwelve(void);
+#ifdef ALIGN
+#undef ALIGN
+#endif
+
+#if defined(__GNUC__)
+#define ALIGN(x) __attribute__ ((aligned(x)))
+#elif defined(_MSC_VER)
+#define ALIGN(x) __declspec(align(x))
+#elif defined(__ARMCC_VERSION)
+#define ALIGN(x) __align(x)
+#else
+#define ALIGN(x)
+#endif
 
 #endif

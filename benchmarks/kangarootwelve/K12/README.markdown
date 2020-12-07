@@ -1,3 +1,5 @@
+[![Build Status](http://img.shields.io/travis/XKCP/K12.svg)](https://travis-ci.org/XKCP/K12)
+
 # What is KangarooTwelve ?
 
 [**KangarooTwelve**][k12] (or **K12**) is a fast and secure extendable-output function (XOF), the generalization of hash functions to arbitrary output lengths.
@@ -22,6 +24,12 @@ Also, some sources have been merged to reduce the file count.
 * For the lower layer, we removed all the functions that are not needed for K12. The lower layer therefore implements a subset of the SnP and PlSnP interfaces.
 
 For Keccak or Xoodoo-based functions other than K12 only, it is recommended to use the XKCP itself instead and not to mix both this repository and the XKCP.
+
+
+# Is there a tool to compute the K12 hash of a file?
+
+Not in this repository, but Jack O'Connor's [`kangarootwelve_xkcp.rs` repository](https://github.com/oconnor663/kangarootwelve_xkcp.rs) contains Rust bindings to this code and a `k12sum` utility.
+Pre-built binaries can be found [there](https://github.com/oconnor663/kangarootwelve_xkcp.rs/releases).
 
 
 # How can I build this K12 code?
@@ -51,8 +59,25 @@ This creates a `.tar.gz` archive with all the necessary files to build the given
 
 The list of targets can be found at the end of [`Makefile.build`](Makefile.build) or by running `make` without parameters.
 
-For Microsoft Visual Studio support and other details, please refer to the [XKCP][xkcp].
+## Microsoft Visual Studio support
+
+KangarooTwelve can be compiled with Microsoft Visual Studio (MSVC). The XKCP build system offers support for the creation of project files. To get a project file for a given target, simply append `.vcxproj` to the target name, e.g.,
+
+```
+make generic64noAsm/K12Tests.vcxproj
+```
+
+The targets `generic32` and `generic64noAsm` can be used with MSVC, but not `generic64` as it contains assembly implementations in the GCC syntax, which at this point cannot be used with MSVC.
+Please refer to the documention of [XKCP][xkcp] for more details on the limitations of the support of MSVC.
 
 [k12]: https://keccak.team/kangarootwelve.html
 [xkcp]: https://github.com/XKCP/XKCP
 [eprint]: https://eprint.iacr.org/2016/770.pdf
+
+
+# Acknowledgments
+
+We wish to thank:
+
+- Jack O'Connor for bug fixes and more importantly for his [Rust bindings](https://github.com/oconnor663/kangarootwelve_xkcp.rs)
+- Kent Ross for his contributions to this code and its quality

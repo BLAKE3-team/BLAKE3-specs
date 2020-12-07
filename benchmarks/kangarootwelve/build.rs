@@ -3,18 +3,6 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn target_name() -> &'static str {
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    {
-        if is_x86_feature_detected!("avx512f") {
-            assert!(
-                is_x86_feature_detected!("avx512vl"),
-                "AVX-512F supported but not AVX-512VL. This isn't SkylakeX.",
-            );
-            return "SkylakeX";
-        } else if is_x86_feature_detected!("avx2") {
-            return "Haswell";
-        }
-    }
     if std::mem::size_of::<usize>() == 8 {
         "generic64"
     } else if std::mem::size_of::<usize>() == 4 {

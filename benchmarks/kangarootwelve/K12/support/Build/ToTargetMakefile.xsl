@@ -1,8 +1,11 @@
 <?xml version='1.0' encoding="UTF-8"?>
 <!--
+The eXtended Keccak Code Package (XKCP)
+https://github.com/XKCP/XKCP
+
 Implementation by Gilles Van Assche, hereby denoted as "the implementer".
 
-For more information, feedback or questions, please refer to our website:
+For more information, feedback or questions, please refer to the Keccak Team website:
 https://keccak.team/
 
 To the extent possible under law, the implementer has waived all copyright
@@ -15,7 +18,8 @@ http://creativecommons.org/publicdomain/zero/1.0/
 
 <xsl:key name="I" match="I" use="."/>
 <xsl:key name="h" match="h" use="."/>
-<xsl:key name="c" match="c" use="."/>
+<xsl:key name="c" match="c|s" use="."/>
+<xsl:key name="inc" match="inc" use="."/>
 
 <xsl:output method="text" indent="no" encoding="UTF-8"/>
 
@@ -48,11 +52,35 @@ http://creativecommons.org/publicdomain/zero/1.0/
 </xsl:template>
 
 <xsl:template match="gcc">
+    <!-- What follows is a shameless hack to avoid -march=native on aarch64 with clang -->
+    <xsl:if test=".= '-march=native'">
+        <xsl:text>ifneq ($(UNAME_M)$(findstring clang,$(CC)),aarch64clang)
+</xsl:text>
+    </xsl:if>
     <xsl:text>CFLAGS := $(CFLAGS) </xsl:text>
     <xsl:value-of select="."/>
     <xsl:text>
-
 </xsl:text>
+    <xsl:if test=".= '-march=native'">
+        <xsl:text>endif
+</xsl:text>
+    </xsl:if>
+</xsl:template>
+
+<xsl:template match="gas">
+    <!-- What follows is a shameless hack to avoid -march=native on aarch64 with clang -->
+    <xsl:if test=".= '-march=native'">
+        <xsl:text>ifneq ($(UNAME_M)$(findstring clang,$(CC)),aarch64clang)
+</xsl:text>
+    </xsl:if>
+    <xsl:text>ASMFLAGS := $(ASMFLAGS) </xsl:text>
+    <xsl:value-of select="."/>
+    <xsl:text>
+</xsl:text>
+    <xsl:if test=".= '-march=native'">
+        <xsl:text>endif
+</xsl:text>
+    </xsl:if>
 </xsl:template>
 
 <xsl:template match="define">
@@ -60,13 +88,12 @@ http://creativecommons.org/publicdomain/zero/1.0/
     <xsl:value-of select="."/>
     <xsl:if test="@as">="<xsl:value-of select="@as"/>"</xsl:if>
     <xsl:text>
-
 </xsl:text>
 </xsl:template>
 
 <xsl:template match="I">
     <xsl:if test="generate-id()=generate-id(key('I', .)[1])">
-        <xsl:text>CFLAGS := $(CFLAGS) -I</xsl:text>
+        <xsl:text>INCLUDEFLAGS := $(INCLUDEFLAGS) -I</xsl:text>
         <xsl:value-of select="."/>
         <xsl:text>
 </xsl:text>
@@ -82,14 +109,27 @@ http://creativecommons.org/publicdomain/zero/1.0/
         <xsl:text>SOURCES := $(SOURCES) </xsl:text>
         <xsl:value-of select="."/>
         <xsl:text>
-
 </xsl:text>
     </xsl:if>
 </xsl:template>
 
-<xsl:template match="c">
-    <xsl:if test="generate-id()=generate-id(key('c', .)[1])">
+<xsl:template match="inc">
+    <xsl:if test="generate-id()=generate-id(key('inc', .)[1])">
+        <xsl:text>INCLUDES := $(INCLUDES) </xsl:text>
+        <xsl:value-of select="."/>
+        <xsl:text>
+</xsl:text>
         <xsl:text>SOURCES := $(SOURCES) </xsl:text>
+        <xsl:value-of select="."/>
+        <xsl:text>
+</xsl:text>
+    </xsl:if>
+</xsl:template>
+
+<xsl:template match="c|s">
+    <xsl:if test="generate-id()=generate-id(key('c', .)[1])">
+        <xsl:text>
+SOURCES := $(SOURCES) </xsl:text>
         <xsl:value-of select="."/>
         <xsl:text>
 </xsl:text>
@@ -103,12 +143,21 @@ http://creativecommons.org/publicdomain/zero/1.0/
         <xsl:value-of select="$object"/>
         <xsl:text>: </xsl:text>
         <xsl:value-of select="."/>
-        <xsl:text> $(HEADERS)
-&#9;$(CC) $(INCLUDES) $(CFLAGS) -c $&lt; -o $@
+        <xsl:text> $(HEADERS) $(INCLUDES)
+</xsl:text>
+        <xsl:choose>
+            <xsl:when test="local-name(.) = 's'">
+                <xsl:text>&#9;$(CC) $(INCLUDEFLAGS) $(ASMFLAGS) </xsl:text>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:text>&#9;$(CC) $(INCLUDEFLAGS) $(CFLAGS) </xsl:text>
+            </xsl:otherwise>
+        </xsl:choose>
+        <xsl:value-of select="@gcc"/>
+        <xsl:text> -c $&lt; -o $@
 OBJECTS := $(OBJECTS) </xsl:text>
         <xsl:value-of select="$object"/>
         <xsl:text>
-
 </xsl:text>
     </xsl:if>
 </xsl:template>
@@ -118,6 +167,8 @@ OBJECTS := $(OBJECTS) </xsl:text>
 <xsl:template match="target">
     <xsl:variable name="final" select="concat('bin/', @name)"/>
     <xsl:variable name="pack" select="concat('bin/', translate(@name, '/', '_'), '.tar.gz')"/>
+    <xsl:variable name="configfilepath" select="concat('bin/.build/', @name, '/')"/>
+    <xsl:variable name="configfile" select="concat($configfilepath, 'config.h')"/>
 
     <xsl:text>all: </xsl:text>
     <xsl:value-of select="@name"/>
@@ -144,6 +195,16 @@ MAKE ?= gmake
 CC ?= gcc
 AR = ar
 
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    ASMFLAGS :=
+endif
+ifeq ($(UNAME_S),Darwin)
+    ASMFLAGS := -x assembler-with-cpp -Wa,-defsym,macOS=1
+endif
+
+UNAME_M := $(shell uname -m)
+
 </xsl:text>
 
     <xsl:if test="substring(@name, string-length(@name)-2, 3)='.so'">
@@ -151,11 +212,28 @@ AR = ar
 </xsl:text>
     </xsl:if>
 
-    <xsl:apply-templates select="gcc|define|I"/>
-    <xsl:apply-templates select="h"/>
-    <xsl:apply-templates select="c"/>
+    <xsl:text>HEADERS := $(HEADERS) </xsl:text>
+    <xsl:value-of select="$configfile"/>
+    <xsl:text>
+</xsl:text>
 
-    <xsl:text>bin/</xsl:text>
+    <xsl:text>SOURCES := $(SOURCES) </xsl:text>
+    <xsl:value-of select="$configfile"/>
+    <xsl:text>
+</xsl:text>
+
+    <xsl:text>INCLUDEFLAGS := $(INCLUDEFLAGS) -I</xsl:text>
+    <xsl:value-of select="$configfilepath"/>
+    <xsl:text>
+</xsl:text>
+
+    <xsl:apply-templates select="gcc|gas|define|I"/>
+    <xsl:apply-templates select="h"/>
+    <xsl:apply-templates select="inc"/>
+    <xsl:apply-templates select="c|s"/>
+
+    <xsl:text>
+bin/</xsl:text>
     <xsl:value-of select="@name"/>
     <xsl:text>: $(BINDIR) $(OBJECTS)
 &#9;mkdir -p $(dir $@)
@@ -172,6 +250,14 @@ AR = ar
             <xsl:text>&#9;mkdir -p $@.headers
 &#9;cp -f $(HEADERS) $@.headers/
 &#9;$(CC) -shared -o $@ $(OBJECTS) $(CFLAGS)
+</xsl:text>
+        </xsl:when>
+        <xsl:when test="substring(@name, string-length(@name)-5, 6)='.dylib'">
+            <xsl:text>&#9;mkdir -p $@.headers
+&#9;cp -f $(HEADERS) $@.headers/
+&#9;$(CC) -dynamiclib -install_name @rpath/</xsl:text>
+        <xsl:value-of select="@name"/>
+        <xsl:text> $(OBJECTS) -o $@
 </xsl:text>
         </xsl:when>
         <xsl:otherwise>

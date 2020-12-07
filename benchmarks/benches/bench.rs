@@ -19,6 +19,7 @@ fn benchmarks(c: &mut Criterion) {
         len *= 2;
     }
     params.push(MAX_LEN);
+    params.push(1 << 30);
 
     let b = ParameterizedBenchmark::new(
         "blake3",
@@ -70,6 +71,7 @@ fn benchmarks(c: &mut Criterion) {
             b.iter(|| kangarootwelve::kangarootwelve(input.get()));
         })
         .throughput(|len| Throughput::Bytes(*len as u64));
+    let b = b.sample_size(10);
     c.bench("bench_group", b);
 }
 

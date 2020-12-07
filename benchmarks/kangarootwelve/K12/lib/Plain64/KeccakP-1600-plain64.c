@@ -2,7 +2,7 @@
 K12 based on the eXtended Keccak Code Package (XKCP)
 https://github.com/XKCP/XKCP
 
-KangarooTwelve, designed by Guido Bertoni, Joan Daemen, Michaël Peeters, Gilles Van Assche, Ronny Van Keer and Benoît Viguier.
+The Keccak-p permutations, designed by Guido Bertoni, Joan Daemen, Michaël Peeters and Gilles Van Assche.
 
 Implementation by Gilles Van Assche and Ronny Van Keer, hereby denoted as "the implementer".
 
@@ -12,11 +12,13 @@ https://keccak.team/
 To the extent possible under law, the implementer has waived all copyright
 and related or neighboring rights to the source code in this file.
 http://creativecommons.org/publicdomain/zero/1.0/
+
+---
+
+Please refer to the XKCP for more details.
 */
 
-#ifndef _TestKangarooTwelve_h_
-#define _TestKangarooTwelve_h_
-
-void testKangarooTwelve(void);
-
-#endif
+const char * KeccakP1600_GetImplementation()
+{
+    return "generic 64-bit implementation";
+}

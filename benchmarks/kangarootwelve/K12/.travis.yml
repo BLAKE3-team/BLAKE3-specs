@@ -1,0 +1,187 @@
+notifications:
+  email:
+    recipients:
+      - gilles-travis@noekeon.org
+    on_failure: always
+
+language: c
+
+sudo: required
+
+before_install:
+- |-
+    case $TRAVIS_OS_NAME in
+      linux)
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test 
+        sudo apt-get -qq update 
+        sudo apt-get install xsltproc
+      ;;
+      windows)
+        choco install -y make 
+        choco install -y xsltproc
+      ;;
+    esac
+
+jobs:
+  allow_failures:
+    - script: make all
+    - script: make generic32/K12Tests && ./bin/generic32/K12Tests -a
+    - script: make generic64/K12Tests && ./bin/generic64/K12Tests -a
+    - script: make generic64noAsm/K12Tests && ./bin/generic64noAsm/K12Tests -a
+    - script: make plain64/K12Tests && ./bin/plain64/K12Tests -a
+  include:
+    - stage: "Tests on AMD64 (windows)"
+      script: make generic32/K12Tests && ./bin/generic32/K12Tests -a
+      os: windows
+      arch: amd64
+      compiler: gcc
+      name: "generic32 (gcc)"
+    - script: make generic64/K12Tests && ./bin/generic64/K12Tests -a
+      os: windows
+      arch: amd64
+      compiler: gcc
+      name: "generic64 (gcc)"
+    - script: make generic64noAsm/K12Tests && ./bin/generic64noAsm/K12Tests -a
+      os: windows
+      arch: amd64
+      compiler: gcc
+      name: "generic64noAsm (gcc)"
+    - script: make plain64/K12Tests && ./bin/plain64/K12Tests -a
+      os: windows
+      arch: amd64
+      compiler: gcc
+      name: "plain64 (gcc)"
+    - script: make all
+      os: windows
+      arch: amd64
+      compiler: gcc
+      name: "all (gcc)"
+    - script: make generic32/K12Tests && ./bin/generic32/K12Tests -a
+      os: windows
+      arch: amd64
+      compiler: clang
+      name: "generic32 (clang)"
+    - script: make generic64/K12Tests && ./bin/generic64/K12Tests -a
+      os: windows
+      arch: amd64
+      compiler: clang
+      name: "generic64 (clang)"
+    - script: make generic64noAsm/K12Tests && ./bin/generic64noAsm/K12Tests -a
+      os: windows
+      arch: amd64
+      compiler: clang
+      name: "generic64noAsm (clang)"
+    - script: make plain64/K12Tests && ./bin/plain64/K12Tests -a
+      os: windows
+      arch: amd64
+      compiler: clang
+      name: "plain64 (clang)"
+    - script: make all
+      os: windows
+      arch: amd64
+      compiler: clang
+      name: "all (clang)"
+
+    - stage: "Tests on AMD64 (linux)"
+      script: make generic32/K12Tests && ./bin/generic32/K12Tests -a
+      os: linux
+      arch: amd64
+      compiler: gcc
+      name: "generic32 (gcc)"
+    - script: make generic64/K12Tests && ./bin/generic64/K12Tests -a
+      os: linux
+      arch: amd64
+      compiler: gcc
+      name: "generic64 (gcc)"
+    - script: make generic64noAsm/K12Tests && ./bin/generic64noAsm/K12Tests -a
+      os: linux
+      arch: amd64
+      compiler: gcc
+      name: "generic64noAsm (gcc)"
+    - script: make plain64/K12Tests && ./bin/plain64/K12Tests -a
+      os: linux
+      arch: amd64
+      compiler: gcc
+      name: "plain64 (gcc)"
+    - script: make all
+      os: linux
+      arch: amd64
+      compiler: gcc
+      name: "all (gcc)"
+    - script: make generic32/K12Tests && ./bin/generic32/K12Tests -a
+      os: linux
+      arch: amd64
+      compiler: clang
+      name: "generic32 (clang)"
+    - script: make generic64/K12Tests && ./bin/generic64/K12Tests -a
+      os: linux
+      arch: amd64
+      compiler: clang
+      name: "generic64 (clang)"
+    - script: make generic64noAsm/K12Tests && ./bin/generic64noAsm/K12Tests -a
+      os: linux
+      arch: amd64
+      compiler: clang
+      name: "generic64noAsm (clang)"
+    - script: make plain64/K12Tests && ./bin/plain64/K12Tests -a
+      os: linux
+      arch: amd64
+      compiler: clang
+      name: "plain64 (clang)"
+    - script: make all
+      os: linux
+      arch: amd64
+      compiler: clang
+      name: "all (clang)"
+
+    - stage: "Tests on AMD64 (osx)"
+      script: make generic32/K12Tests && ./bin/generic32/K12Tests -a
+      os: osx
+      arch: amd64
+      compiler: gcc
+      name: "generic32 (gcc)"
+    - script: make generic64/K12Tests && ./bin/generic64/K12Tests -a
+      os: osx
+      arch: amd64
+      compiler: gcc
+      name: "generic64 (gcc)"
+    - script: make generic64noAsm/K12Tests && ./bin/generic64noAsm/K12Tests -a
+      os: osx
+      arch: amd64
+      compiler: gcc
+      name: "generic64noAsm (gcc)"
+    - script: make plain64/K12Tests && ./bin/plain64/K12Tests -a
+      os: osx
+      arch: amd64
+      compiler: gcc
+      name: "plain64 (gcc)"
+    - script: make all
+      os: osx
+      arch: amd64
+      compiler: gcc
+      name: "all (gcc)"
+    - script: make generic32/K12Tests && ./bin/generic32/K12Tests -a
+      os: osx
+      arch: amd64
+      compiler: clang
+      name: "generic32 (clang)"
+    - script: make generic64/K12Tests && ./bin/generic64/K12Tests -a
+      os: osx
+      arch: amd64
+      compiler: clang
+      name: "generic64 (clang)"
+    - script: make generic64noAsm/K12Tests && ./bin/generic64noAsm/K12Tests -a
+      os: osx
+      arch: amd64
+      compiler: clang
+      name: "generic64noAsm (clang)"
+    - script: make plain64/K12Tests && ./bin/plain64/K12Tests -a
+      os: osx
+      arch: amd64
+      compiler: clang
+      name: "plain64 (clang)"
+    - script: make all
+      os: osx
+      arch: amd64
+      compiler: clang
+      name: "all (clang)"

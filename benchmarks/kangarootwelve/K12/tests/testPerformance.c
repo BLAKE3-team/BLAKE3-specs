@@ -1,9 +1,12 @@
 /*
-Implementation by the Keccak Team, namely, Guido Bertoni, Joan Daemen,
-Michaël Peeters, Gilles Van Assche and Ronny Van Keer,
-hereby denoted as "the implementer".
+K12 based on the eXtended Keccak Code Package (XKCP)
+https://github.com/XKCP/XKCP
 
-For more information, feedback or questions, please refer to our website:
+KangarooTwelve, designed by Guido Bertoni, Joan Daemen, Michaël Peeters, Gilles Van Assche, Ronny Van Keer and Benoît Viguier.
+
+Implementation by Gilles Van Assche and Ronny Van Keer, hereby denoted as "the implementer".
+
+For more information, feedback or questions, please refer to the Keccak Team website:
 https://keccak.team/
 
 To the extent possible under law, the implementer has waived all copyright
@@ -12,111 +15,126 @@ http://creativecommons.org/publicdomain/zero/1.0/
 */
 
 #include <assert.h>
+#include <inttypes.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "align.h"
 #include "KangarooTwelve.h"
+#include "KeccakP-1600-SnP.h"
 #include "timing.h"
 #include "testPerformance.h"
 
-void displayMeasurements1101001000(uint_32t *measurements, uint_32t *laneCounts, unsigned int numberOfColumns, unsigned int laneLengthInBytes);
+#define BIG_BUFFER_SIZE (2*1024*1024)
+ALIGN(64) uint8_t bigBuffer[BIG_BUFFER_SIZE];
 
-#define xstr(s) str(s)
-#define str(s) #s
-
-uint_32t measureKangarooTwelve(uint_32t dtMin, unsigned int inputLen)
+cycles_t measurePerformance(int (*impl)(const unsigned char*, size_t,
+                                       unsigned char*, size_t,
+                                       const unsigned char*, size_t),
+                           cycles_t dtMin, unsigned int inputLen)
 {
-    ALIGN(32) unsigned char input[1024*1024];
-    ALIGN(32) unsigned char output[32];
+    ALIGN(64) unsigned char output[32];
     measureTimingDeclare
 
-    assert(inputLen <= 1024*1024);
+    assert(inputLen <= BIG_BUFFER_SIZE);
 
-    memset(input, 0xA5, 16);
+    memset(bigBuffer, 0xA5, 16);
 
     measureTimingBeginDeclared
-    KangarooTwelve(input, inputLen, output, 32, (const unsigned char *)"", 0);
+    impl(bigBuffer, inputLen, output, 32, (const unsigned char *)"", 0);
     measureTimingEnd
 }
 
+#ifndef KeccakP1600_disableParallelism
+void KangarooTwelve_SetProcessorCapabilities();
+#endif
+
 void printKangarooTwelvePerformanceHeader( void )
 {
+#ifndef KeccakP1600_disableParallelism
+    KangarooTwelve_SetProcessorCapabilities();
+#endif
     printf("*** KangarooTwelve ***\n");
     printf("Using Keccak-p[1600,12] implementations:\n");
-    printf("- \303\2271: " KeccakP1600_implementation "\n");
+    printf("- \303\2271: %s\n", KeccakP1600_GetImplementation());
     #if defined(KeccakP1600_12rounds_FastLoop_supported)
     printf("      + KeccakP1600_12rounds_FastLoop_Absorb()\n");
     #endif
 
-    #if defined(KeccakP1600times2_implementation) && !defined(KeccakP1600times2_isFallback)
-    printf("- \303\2272: " KeccakP1600times2_implementation "\n");
+#ifndef KeccakP1600_disableParallelism
+    if (KeccakP1600times2_IsAvailable()) {
+        printf("- \303\2272: %s\n", KeccakP1600times2_GetImplementation());
     #if defined(KeccakP1600times2_12rounds_FastLoop_supported)
-    printf("      + KeccakP1600times2_12rounds_FastLoop_Absorb()\n");
+        printf("      + KeccakP1600times2_12rounds_FastLoop_Absorb()\n");
     #endif
-    #else
-    printf("- \303\2272: not used\n");
-    #endif
+    }
+    else
+        printf("- \303\2272: not used\n");
 
-    #if defined(KeccakP1600times4_implementation) && !defined(KeccakP1600times4_isFallback)
-    printf("- \303\2274: " KeccakP1600times4_implementation "\n");
+    if (KeccakP1600times4_IsAvailable()) {
+        printf("- \303\2274: %s\n", KeccakP1600times4_GetImplementation());
     #if defined(KeccakP1600times4_12rounds_FastLoop_supported)
-    printf("      + KeccakP1600times4_12rounds_FastLoop_Absorb()\n");
+        printf("      + KeccakP1600times4_12rounds_FastLoop_Absorb()\n");
     #endif
-    #else
-    printf("- \303\2274: not used\n");
-    #endif
+    }
+    else
+        printf("- \303\2274: not used\n");
 
-    #if defined(KeccakP1600times8_implementation) && !defined(KeccakP1600times8_isFallback)
-    printf("- \303\2278: " KeccakP1600times8_implementation "\n");
+    if (KeccakP1600times8_IsAvailable()) {
+        printf("- \303\2278: %s\n", KeccakP1600times8_GetImplementation());
     #if defined(KeccakP1600times8_12rounds_FastLoop_supported)
-    printf("      + KeccakP1600times8_12rounds_FastLoop_Absorb()\n");
+        printf("      + KeccakP1600times8_12rounds_FastLoop_Absorb()\n");
     #endif
-    #else
-    printf("- \303\2278: not used\n");
-    #endif
+    }
+    else
+        printf("- \303\2278: not used\n");
+#endif
 
     printf("\n");
 }
 
-void testKangarooTwelvePerformanceOne( void )
+void testPerformanceFull(int (*impl)(const unsigned char*, size_t,
+                                     unsigned char*, size_t,
+                                     const unsigned char*, size_t))
 {
     const unsigned int chunkSize = 8192;
     unsigned halfTones;
-    uint_32t calibration = calibrate();
+    cycles_t calibration = CalibrateTimer();
     unsigned int chunkSizeLog = (unsigned int)floor(log(chunkSize)/log(2.0)+0.5);
     int displaySlope = 0;
 
-    measureKangarooTwelve(calibration, 500000);
+    measurePerformance(impl, calibration, 500000);
     for(halfTones=chunkSizeLog*12-28; halfTones<=13*12; halfTones+=4) {
         double I = pow(2.0, halfTones/12.0);
         unsigned int i  = (unsigned int)floor(I+0.5);
-        uint_32t time, timePlus1Block, timePlus2Blocks, timePlus4Blocks, timePlus8Blocks;
-        uint_32t timePlus84Blocks;
-        time = measureKangarooTwelve(calibration, i);
+        cycles_t time, timePlus1Block, timePlus2Blocks, timePlus4Blocks, timePlus8Blocks;
+        cycles_t timePlus168Blocks;
+        time = measurePerformance(impl, calibration, i);
         if (i == chunkSize) {
             displaySlope = 1;
-            timePlus1Block  = measureKangarooTwelve(calibration, i+1*chunkSize);
-            timePlus2Blocks = measureKangarooTwelve(calibration, i+2*chunkSize);
-            timePlus4Blocks = measureKangarooTwelve(calibration, i+4*chunkSize);
-            timePlus8Blocks = measureKangarooTwelve(calibration, i+8*chunkSize);
-            timePlus84Blocks = measureKangarooTwelve(calibration, i+84*chunkSize);
+            timePlus1Block  = measurePerformance(impl, calibration, i+1*chunkSize);
+            timePlus2Blocks = measurePerformance(impl, calibration, i+2*chunkSize);
+            timePlus4Blocks = measurePerformance(impl, calibration, i+4*chunkSize);
+            timePlus8Blocks = measurePerformance(impl, calibration, i+8*chunkSize);
+            timePlus168Blocks = measurePerformance(impl, calibration, i+168*chunkSize);
         }
-        printf("%8d bytes: %9d cycles, %6.3f cycles/byte\n", i, time, time*1.0/i);
+        printf("%8u bytes: %9"PRId64" cycles, %6.3f cycles/byte\n", i, time, time*1.0/i);
         if (displaySlope) {
-            printf("     +1 block:  %9d cycles, %6.3f cycles/byte (slope)\n", timePlus1Block, (timePlus1Block-(double)(time))*1.0/chunkSize/1.0);
-            printf("     +2 blocks: %9d cycles, %6.3f cycles/byte (slope)\n", timePlus2Blocks, (timePlus2Blocks-(double)(time))*1.0/chunkSize/2.0);
-            printf("     +4 blocks: %9d cycles, %6.3f cycles/byte (slope)\n", timePlus4Blocks, (timePlus4Blocks-(double)(time))*1.0/chunkSize/4.0);
-            printf("     +8 blocks: %9d cycles, %6.3f cycles/byte (slope)\n", timePlus8Blocks, (timePlus8Blocks-(double)(time))*1.0/chunkSize/8.0);
-            printf("    +84 blocks: %9d cycles, %6.3f cycles/byte (slope)\n", timePlus84Blocks, (timePlus84Blocks-(double)(time))*1.0/chunkSize/84.0);
+            printf("     +1 block:  %9"PRId64" cycles, %6.3f cycles/byte (slope)\n", timePlus1Block, (timePlus1Block-(double)(time))*1.0/chunkSize/1.0);
+            printf("     +2 blocks: %9"PRId64" cycles, %6.3f cycles/byte (slope)\n", timePlus2Blocks, (timePlus2Blocks-(double)(time))*1.0/chunkSize/2.0);
+            printf("     +4 blocks: %9"PRId64" cycles, %6.3f cycles/byte (slope)\n", timePlus4Blocks, (timePlus4Blocks-(double)(time))*1.0/chunkSize/4.0);
+            printf("     +8 blocks: %9"PRId64" cycles, %6.3f cycles/byte (slope)\n", timePlus8Blocks, (timePlus8Blocks-(double)(time))*1.0/chunkSize/8.0);
+            printf("   +168 blocks: %9"PRId64" cycles, %6.3f cycles/byte (slope)\n", timePlus168Blocks, (timePlus168Blocks-(double)(time))*1.0/chunkSize/168.0);
             displaySlope = 0;
         }
     }
-    for(halfTones=12*12; halfTones<=19*12; halfTones+=4) {
+    for(halfTones=12*12; halfTones<=20*12; halfTones+=4) {
         double I = chunkSize + pow(2.0, halfTones/12.0);
         unsigned int i  = (unsigned int)floor(I+0.5);
-        uint_32t time;
-        time = measureKangarooTwelve(calibration, i);
-        printf("%8d bytes: %9d cycles, %6.3f cycles/byte\n", i, time, time*1.0/i);
+        cycles_t time;
+        time = measurePerformance(impl, calibration, i);
+        printf("%8u bytes: %9"PRId64" cycles, %6.3f cycles/byte\n", i, time, time*1.0/i);
     }
     printf("\n\n");
 }
@@ -124,89 +142,55 @@ void testKangarooTwelvePerformanceOne( void )
 void testKangarooTwelvePerformance()
 {
     printKangarooTwelvePerformanceHeader();
-    testKangarooTwelvePerformanceOne();
+    testPerformanceFull(KangarooTwelve);
 }
 void testPerformance()
 {
+#if defined(KeccakP1600_enable_simd_options) && !defined(KeccakP1600_disableParallelism)
+    // Read feature availability
+    KangarooTwelve_EnableAllCpuFeatures();
+    int cpu_has_AVX512 = KangarooTwelve_DisableAVX512();
+    int cpu_has_AVX2 = KangarooTwelve_DisableAVX2();
+    int cpu_has_SSSE3 = KangarooTwelve_DisableSSSE3();
+#endif
+
+    // Test without vectorization
     testKangarooTwelvePerformance();
-}
 
-void bubbleSort(double *list, unsigned int size)
-{
-    unsigned int n = size;
+#if defined(KeccakP1600_enable_simd_options) && !defined(KeccakP1600_disableParallelism)
+    // Test with SSSE3 only if it's available
+    if (cpu_has_SSSE3) {
+        printf("\n");
+        KangarooTwelve_EnableAllCpuFeatures();
+        KangarooTwelve_DisableAVX512();
+        KangarooTwelve_DisableAVX2();
+        testKangarooTwelvePerformance();
+    }
+    // Test with SSSE3 and AVX2 if they're available
+    if (cpu_has_AVX2) {
+        printf("\n");
+        KangarooTwelve_EnableAllCpuFeatures();
+        KangarooTwelve_DisableAVX512();
+        testKangarooTwelvePerformance();
+    }
+    // Finally, test with everything enabled if we have AVX512
+    if (cpu_has_AVX512) {
+        printf("\n");
+        KangarooTwelve_EnableAllCpuFeatures();
+        testKangarooTwelvePerformance();
+    }
+#endif
 
-    do {
-       unsigned int newn = 0;
-       unsigned int i;
+    // Set `comparison` to your own function here to directly
+    // compare performance against K12. It should have the same signature
+    // as KangarooTwelve(...): the parameters are input, output, and
+    // customization buffers.
+    int (*comparison)(const unsigned char*, size_t,
+                      unsigned char*, size_t,
+                      const unsigned char*, size_t) = NULL;
 
-       for(i=1; i<n; i++) {
-          if (list[i-1] > list[i]) {
-              double temp = list[i-1];
-              list[i-1] = list[i];
-              list[i] = temp;
-              newn = i;
-          }
-       }
-       n = newn;
+    if (comparison != NULL) {
+      printf("\n*** Non-K12 function for comparison: ***\n");
+      testPerformanceFull(comparison);
     }
-    while(n > 0);
-}
-
-double med4(double x0, double x1, double x2, double x3)
-{
-    double list[4];
-    list[0] = x0;
-    list[1] = x1;
-    list[2] = x2;
-    list[3] = x3;
-    bubbleSort(list, 4);
-    if (fabs(list[2]-list[0]) < fabs(list[3]-list[1]))
-        return 0.25*list[0]+0.375*list[1]+0.25*list[2]+0.125*list[3];
-    else
-        return 0.125*list[0]+0.25*list[1]+0.375*list[2]+0.25*list[3];
-}
-
-void displayMeasurements1101001000(uint_32t *measurements, uint_32t *laneCounts, unsigned int numberOfColumns, unsigned int laneLengthInBytes)
-{
-    double cpb[4];
-    unsigned int i;
-
-    for(i=0; i<numberOfColumns; i++) {
-        uint_32t bytes = laneCounts[i]*laneLengthInBytes;
-        double x = med4(measurements[i*4+0]*1.0, measurements[i*4+1]/10.0, measurements[i*4+2]/100.0, measurements[i*4+3]/1000.0);
-        cpb[i] = x/bytes;
-    }
-    if (numberOfColumns == 1) {
-        printf("     laneCount:  %5d\n", laneCounts[0]);
-        printf("       1 block:  %5d\n", measurements[0]);
-        printf("      10 blocks: %6d\n", measurements[1]);
-        printf("     100 blocks: %7d\n", measurements[2]);
-        printf("    1000 blocks: %8d\n", measurements[3]);
-        printf("    cycles/byte: %7.2f\n", cpb[0]);
-    }
-    else if (numberOfColumns == 2) {
-        printf("     laneCount:  %5d       %5d\n", laneCounts[0], laneCounts[1]);
-        printf("       1 block:  %5d       %5d\n", measurements[0], measurements[4]);
-        printf("      10 blocks: %6d      %6d\n", measurements[1], measurements[5]);
-        printf("     100 blocks: %7d     %7d\n", measurements[2], measurements[6]);
-        printf("    1000 blocks: %8d    %8d\n", measurements[3], measurements[7]);
-        printf("    cycles/byte: %7.2f     %7.2f\n", cpb[0], cpb[1]);
-    }
-    else if (numberOfColumns == 3) {
-        printf("     laneCount:  %5d       %5d       %5d\n", laneCounts[0], laneCounts[1], laneCounts[2]);
-        printf("       1 block:  %5d       %5d       %5d\n", measurements[0], measurements[4], measurements[8]);
-        printf("      10 blocks: %6d      %6d      %6d\n", measurements[1], measurements[5], measurements[9]);
-        printf("     100 blocks: %7d     %7d     %7d\n", measurements[2], measurements[6], measurements[10]);
-        printf("    1000 blocks: %8d    %8d    %8d\n", measurements[3], measurements[7], measurements[11]);
-        printf("    cycles/byte: %7.2f     %7.2f     %7.2f\n", cpb[0], cpb[1], cpb[2]);
-    }
-    else if (numberOfColumns == 4) {
-        printf("     laneCount:  %5d       %5d       %5d       %5d\n", laneCounts[0], laneCounts[1], laneCounts[2], laneCounts[3]);
-        printf("       1 block:  %5d       %5d       %5d       %5d\n", measurements[0], measurements[4], measurements[8], measurements[12]);
-        printf("      10 blocks: %6d      %6d      %6d      %6d\n", measurements[1], measurements[5], measurements[9], measurements[13]);
-        printf("     100 blocks: %7d     %7d     %7d     %7d\n", measurements[2], measurements[6], measurements[10], measurements[14]);
-        printf("    1000 blocks: %8d    %8d    %8d    %8d\n", measurements[3], measurements[7], measurements[11], measurements[15]);
-        printf("    cycles/byte: %7.2f     %7.2f     %7.2f     %7.2f\n", cpb[0], cpb[1], cpb[2], cpb[3]);
-    }
-    printf("\n");
 }

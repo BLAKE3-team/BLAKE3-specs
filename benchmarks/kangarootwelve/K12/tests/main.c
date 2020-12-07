@@ -1,9 +1,12 @@
 /*
-Implementation by the Keccak Team, namely, Guido Bertoni, Joan Daemen,
-Michaël Peeters, Gilles Van Assche and Ronny Van Keer,
-hereby denoted as "the implementer".
+K12 based on the eXtended Keccak Code Package (XKCP)
+https://github.com/XKCP/XKCP
 
-For more information, feedback or questions, please refer to our website:
+KangarooTwelve, designed by Guido Bertoni, Joan Daemen, Michaël Peeters, Gilles Van Assche, Ronny Van Keer and Benoît Viguier.
+
+Implementation by Gilles Van Assche and Ronny Van Keer, hereby denoted as "the implementer".
+
+For more information, feedback or questions, please refer to the Keccak Team website:
 https://keccak.team/
 
 To the extent possible under law, the implementer has waived all copyright
@@ -15,8 +18,12 @@ http://creativecommons.org/publicdomain/zero/1.0/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "align.h"
+#include "KangarooTwelve.h"
 #include "testKangarooTwelve.h"
 #include "testPerformance.h"
+
+#define BENCH1GB
 
 void printHelp()
 {
@@ -25,7 +32,21 @@ void printHelp()
         printf("  --all or -a               All tests\n");
         printf("  --KangarooTwelve or -K12  Tests on KangarooTwelve\n");
         printf("  --speed or -s             Speed measuresments\n");
+#ifdef BENCH1GB
+        printf("  --1GB                     Just hash 1GB of data and exit\n");
+#endif
 }
+
+#ifdef BENCH1GB
+void bench1GB()
+{
+    #define INPUT_SIZE 1000000000
+    static ALIGN(64) unsigned char input[INPUT_SIZE];
+    static ALIGN(64) unsigned char output[32];
+    KangarooTwelve(input, INPUT_SIZE, output, 32, 0, 0);
+    #undef INPUT_SIZE
+}
+#endif
 
 int process(int argc, char* argv[])
 {
@@ -34,8 +55,15 @@ int process(int argc, char* argv[])
     int KangarooTwelve = 0;
     int speed = 0;
 
-    if (argc == 1)
+    if (argc <= 1)
         help = 1;
+
+#ifdef BENCH1GB
+    if (argc > 1 && strcmp("--1GB", argv[1]) == 0) {
+        bench1GB();
+        return 0;
+    }
+#endif
 
     for(i=1; i<argc; i++) {
         if ((strcmp("--help", argv[i]) == 0) || (strcmp("-h", argv[i]) == 0))
