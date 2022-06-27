@@ -9,7 +9,7 @@ criterion_main!(cg);
 
 fn hash_rayon(input: &[u8]) -> blake3::Hash {
     blake3::Hasher::new()
-        .update_with_join::<blake3::join::RayonJoin>(input)
+        .update_rayon(input)
         .finalize()
 }
 
