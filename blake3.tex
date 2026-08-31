@@ -367,7 +367,7 @@ h_{14}' \ & \leftarrow \ v'_{14} \oplus  h_{6} \\
 h_{7}'  \ & \leftarrow \ v'_{7} \oplus  v'_{15} &
 h_{15}' \ & \leftarrow \ v'_{15} \oplus  h_{7}\,.
 \end{align*}
-If we define $v_l$ (resp. $v'_l$) and $v_h$ (resp. $v'_h$) as the first and last 8-words of the input (resp. output) of $E(m, v)$, the compression function may be written as
+If we define $v_l$ (resp. $v'_l$) and $v_h$ (resp. $v'_h$) as the first and last 8 words of the input (resp. output) of $E(m, v)$, the compression function may be written as
 \[
   \begin{pmatrix}
     1 & 1 \\
@@ -533,7 +533,7 @@ in advance.
 %\input{./benchmarks/results/rpizero.pgf}
 \input{./img/rpizero.tikz}
 \caption{Throughput for single-threaded BLAKE3 and other hash functions on a
-    Rasperry Pi Zero, measured in cycles per byte. This is a 32-bit ARM1176
+    Raspberry Pi Zero, measured in cycles per byte. This is a 32-bit ARM1176
     processor. Lower is faster.}%
 \label{fig:rpizero}
 \end{figure}
@@ -656,7 +656,7 @@ We do note that the truncated compression function used in every compression exc
 
 One important aspect of any hash mode, parallel or otherwise, is its \emph{soundness}. Several works~\cite{DBLP:conf/fse/DodisRRS09,DBLP:journals/iacr/DaemenDA11,DBLP:journals/ijisec/BertoniDPA14,DBLP:journals/tosc/DaemenMA18} have studied the requirements for the mode of operation of a hash function such that, when instantiated with an ideal compression function, block cipher, or permutation, it remains indistinguishable from a random oracle. We adopt the requirements from Daemen et al.~\cite{DBLP:journals/tosc/DaemenMA18}, which are:
 \begin{itemize}
-  \item Subtree-freeness, i.e, no valid tree may be a subtree of another;
+  \item Subtree-freeness, i.e., no valid tree may be a subtree of another;
   \item Radical-decodability, i.e., preventing collisions by ambiguity of the tree shape;
   \item Message-completeness, i.e., the entire message can be recovered from the inputs to the primitive in question.
 \end{itemize}
@@ -665,8 +665,8 @@ One important aspect of any hash mode, parallel or otherwise, is its \emph{sound
   Subtree-freeness ensures that generalized length-extension attacks, like the ones that plagued Merkle-Damg{\aa}rd, cannot happen.
   To ensure subtree-freeness, BLAKE3 defines the \flag{ROOT} flag, which is only set on the last compression output. Thus, for any valid tree, a valid subtree must have the same root node. There are two cases to consider here:
   \begin{enumerate}
-    \item The \flag{ROOT} flag is combined with \flag{CHUNK_END}; in this case we are dealing with a single-chunk message, and the root nodes must be the same, as well as its parents, grandparents, etc, until we reach a \flag{CHUNK_START} node. Because both subtrees must start with \flag{CHUNK_START}, we conclude that both trees must be the same.
-    \item The \flag{ROOT} flag is applied to a parent node. Here the root node necessarily has two parents, each of which must be equal, recursing until they hit the same set of leaves marked by the \flag{CHUNK_END} flag.
+    \item The \flag{ROOT} flag is combined with \flag{CHUNK_END}; in this case we are dealing with a single-chunk message, and the root nodes must be the same, as well as their parents, grandparents, etc, until we reach a \flag{CHUNK_START} node. Because both subtrees must start with \flag{CHUNK_START}, we conclude that both trees must be the same.
+    \item The \flag{ROOT} flag is applied to a parent node. Here the root node necessarily has two children, each of which must be equal, recursing until they hit the same set of leaves marked by the \flag{CHUNK_END} flag.
   \end{enumerate}
 }
 \paragraph{Radical-decodability}{
@@ -920,7 +920,7 @@ recursively, until the parts are chunk-sized, and each chunk is compressed into
 a CV. On the way back up the call stack, each pair of left and right child CVs
 is compressed into a parent CV.
 
-This recursive approach is good fit for a fork-join concurrency model, like
+This recursive approach is a good fit for a fork-join concurrency model, like
 those provided by OpenMP, Cilk, and Rayon (Rust). Each left and right part
 becomes a separate task, and a work-stealing runtime parallelizes those tasks
 across however many threads are available. This can work without heap
@@ -1141,8 +1141,8 @@ chaining values of its children.) We compute the root node's CV as per
 \S\ref{sec:parent} and confirm that it matches the 32-byte BLAKE3 hash of the
 entire file. Then, we fetch the root node's left child, which is the first
 chunk's parent. We compute that node's CV and confirm that it matches the first
-32-bytes of the root node. Finally, we fetch the first chunk itself. We compute
-its CV as per \S\ref{sec:chunk} and verify that it matches the first 32-bytes
+32 bytes of the root node. Finally, we fetch the first chunk itself. We compute
+its CV as per \S\ref{sec:chunk} and verify that it matches the first 32 bytes
 of its parent. This verifies that the first chunk is authentic, and we can pass
 it along to application code.
 
